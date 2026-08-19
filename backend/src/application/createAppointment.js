@@ -44,7 +44,10 @@ export const createAppointment = async (db, { accountId, serviceId, scheduledAt,
       notes,
     });
   } catch (err) {
-    if (err.message === 'appointment_overlap') throw httpErr(409, 'appointment_overlap');
+    // Drizzle wraps pg errors: real message lives in err.cause
+    if ((err.cause?.message ?? err.message) === 'appointment_overlap') {
+      throw httpErr(409, 'appointment_overlap');
+    }
     throw err;
   }
 

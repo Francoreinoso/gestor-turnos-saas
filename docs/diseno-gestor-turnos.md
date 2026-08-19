@@ -227,8 +227,43 @@ Diferencias funcionales `owner` vs `staff`:
 
 ---
 
-## 5. Pendiente
+## 5. Setup técnico
 
-- **Setup técnico**: estructura de carpetas, elección de ORM (Drizzle vs. Sequelize), configuración de repo y CI.
+- **ORM:** Drizzle, no Sequelize — el proyecto depende de lógica que vive en la base de datos (trigger de solapamiento, `CHECK` condicional, índice único funcional sobre `lower(email)`), y las migraciones `.sql` reales de Drizzle permiten escribir esa lógica en el mismo archivo/lenguaje, sin mezclar SQL crudo dentro de wrappers JS como exigiría Sequelize.
+- **Monorepo:** frontend y backend en el mismo repositorio — al ser desarrollo individual, la sincronización entre ambos lados pesa más que el orden que dan los repos separados (relevante sobre todo con equipos grandes, no es el caso acá).
+- **Arquitectura backend:** clean architecture (domain / application / infrastructure), reusando el patrón ya aplicado en `my-finances`/`my-tasks`. Reglas de negocio puras (máquina de estados, nulabilidad condicional) en `domain`; orquestación de casos de uso (ej. reprogramar = verificar disponibilidad + auto-asignar + transacción) en `application`; detalle técnico (Express, Drizzle, S3, Twilio) en `infrastructure`.
+- **Migraciones:** carpeta `db/` separada, hermana de `src/` — `drizzle-kit` necesita ejecutarlas sin levantar la aplicación completa.
+
+```
+gestor-turnos/
+├── backend/
+│   ├── src/
+│   │   ├── domain/
+│   │   ├── application/
+│   │   └── infrastructure/
+│   │       ├── http/
+│   │       ├── db/
+│   │       └── integrations/
+│   ├── db/
+│   │   ├── schema.ts
+│   │   └── migrations/
+│   ├── tests/
+│   ├── drizzle.config.ts
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── domain/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── services/
+│   └── package.json
+├── docs/
+│   └── diseno-gestor-turnos.md
+├── docker-compose.yml
+└── README.md
+```
+
+## 6. Pendiente
+
 - **`payments`, `notifications`, `attachments`**: definidos en el ERD inicial, sin especificación de endpoints todavía.
 - Implementación de JWT (middleware, expiración, refresh tokens) — el diseño de *qué* autoriza cada rol ya está resuelto; falta el detalle de implementación del propio JWT en sí (esto es más convención que decisión de diseño, y AlojaFacil ya tiene el patrón resuelto para reutilizar).

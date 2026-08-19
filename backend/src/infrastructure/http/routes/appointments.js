@@ -85,7 +85,7 @@ router.post('/block', auth, wrap(async (req, res) => {
       notes,
     });
   } catch (err) {
-    if (err.message === 'appointment_overlap') throw httpErr(409, 'appointment_overlap');
+    if ((err.cause?.message ?? err.message) === 'appointment_overlap') throw httpErr(409, 'appointment_overlap');
     throw err;
   }
 
