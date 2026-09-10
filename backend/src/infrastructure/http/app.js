@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import accountRoutes from './routes/accounts.js';
 import authRoutes from './routes/auth.js';
 import appointmentRoutes from './routes/appointments.js';
 import serviceRoutes from './routes/services.js';
@@ -11,6 +12,7 @@ import { startCron } from '../integrations/cron.js';
 const app = express();
 app.use(express.json());
 
+app.use('/accounts', accountRoutes);
 app.use('/auth', authRoutes);
 app.use('/appointments', appointmentRoutes);
 app.use('/services', serviceRoutes);

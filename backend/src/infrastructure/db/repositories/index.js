@@ -1,5 +1,7 @@
+export { accountRepo as accounts } from './accounts.js';
 export { appointmentRepo as appointments } from './appointments.js';
 export { clientRepo as clients } from './clients.js';
+export { paymentRepo as payments } from './payments.js';
 export { serviceRepo as services } from './services.js';
 export { userRepo as users } from './users.js';
 export { tokenRepo as tokens } from './tokens.js';

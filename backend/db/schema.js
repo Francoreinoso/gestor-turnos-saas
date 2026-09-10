@@ -1,4 +1,5 @@
 import { pgTable, pgEnum, uuid, varchar, text, integer, numeric, boolean, timestamp, time } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('role', ['owner', 'staff']);
 export const appointmentStatusEnum = pgEnum('appointment_status', [
@@ -8,6 +9,7 @@ export const appointmentStatusEnum = pgEnum('appointment_status', [
 export const accounts = pgTable('accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
   business_name: varchar('business_name', { length: 255 }).notNull(),
+  commission_rate: numeric('commission_rate', { precision: 5, scale: 4 }),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -19,6 +21,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   password_hash: varchar('password_hash', { length: 255 }).notNull(),
   role: roleEnum('role').notNull(),
+  commission_rate: numeric('commission_rate', { precision: 5, scale: 4 }),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -88,3 +91,68 @@ export const appointmentAccessTokens = pgTable('appointment_access_tokens', {
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
+
+export const payments = pgTable('payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  appointment_id: uuid('appointment_id').notNull().references(() => appointments.id, { onDelete: 'restrict' }),
+  account_id: uuid('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
+  assigned_user_id: uuid('assigned_user_id').references(() => users.id, { onDelete: 'set null' }),
+  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  commission_rate_applied: numeric('commission_rate_applied', { precision: 5, scale: 4 }),
+  employee_amount: numeric('employee_amount', { precision: 10, scale: 2 }),
+  business_amount: numeric('business_amount', { precision: 10, scale: 2 }),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ── Relations ──────────────────────────────────────────────────────────────────
+
+export const accountsRelations = relations(accounts, ({ many }) => ({
+  users: many(users),
+  appointments: many(appointments),
+  payments: many(payments),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  account: one(accounts, { fields: [users.account_id], references: [accounts.id] }),
+  availability: many(availability),
+  appointments: many(appointments, { relationName: 'assignedUser' }),
+}));
+
+export const clientsRelations = relations(clients, ({ one, many }) => ({
+  account: one(accounts, { fields: [clients.account_id], references: [accounts.id] }),
+  appointments: many(appointments),
+}));
+
+export const servicesRelations = relations(services, ({ one, many }) => ({
+  account: one(accounts, { fields: [services.account_id], references: [accounts.id] }),
+  priceHistories: many(servicePriceHistories),
+  appointments: many(appointments),
+}));
+
+export const servicePriceHistoriesRelations = relations(servicePriceHistories, ({ one }) => ({
+  service: one(services, { fields: [servicePriceHistories.service_id], references: [services.id] }),
+}));
+
+export const availabilityRelations = relations(availability, ({ one }) => ({
+  user: one(users, { fields: [availability.user_id], references: [users.id] }),
+}));
+
+export const appointmentsRelations = relations(appointments, ({ one }) => ({
+  client: one(clients, { fields: [appointments.client_id], references: [clients.id] }),
+  service: one(services, { fields: [appointments.service_id], references: [services.id] }),
+  assignedUser: one(users, {
+    fields: [appointments.assigned_user_id],
+    references: [users.id],
+    relationName: 'assignedUser',
+  }),
+  payment: one(payments, { fields: [appointments.id], references: [payments.appointment_id] }),
+}));
+
+export const appointmentAccessTokensRelations = relations(appointmentAccessTokens, ({ one }) => ({
+  appointment: one(appointments, { fields: [appointmentAccessTokens.appointment_id], references: [appointments.id] }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  appointment: one(appointments, { fields: [payments.appointment_id], references: [appointments.id] }),
+  assignedUser: one(users, { fields: [payments.assigned_user_id], references: [users.id] }),
+}));
