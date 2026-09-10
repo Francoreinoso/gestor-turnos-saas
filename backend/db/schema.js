@@ -1,5 +1,5 @@
-import { pgTable, pgEnum, uuid, varchar, text, integer, numeric, boolean, timestamp, time } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, pgEnum, uuid, varchar, text, integer, numeric, boolean, timestamp, time, check } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('role', ['owner', 'staff']);
 export const appointmentStatusEnum = pgEnum('appointment_status', [
@@ -46,7 +46,9 @@ export const services = pgTable('services', {
   active: boolean('active').notNull().default(true),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  durationPositive: check('services_duration_positive', sql`${table.duration_minutes} > 0`),
+}));
 
 export const servicePriceHistories = pgTable('service_price_histories', {
   id: uuid('id').primaryKey().defaultRandom(),

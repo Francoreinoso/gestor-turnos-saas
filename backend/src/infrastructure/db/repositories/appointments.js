@@ -1,6 +1,13 @@
 import { eq, and, ne, lt, gt, lte, gte, isNull, or } from 'drizzle-orm';
 import { appointments } from '../../../../db/schema.js';
 
+// Proyección resumida compartida por listado y detalle (spec 001 RF-36 / RF-43).
+const SUMMARY_WITH = {
+  client: { columns: { id: true, name: true, email: true, phone: true } },
+  service: { columns: { id: true, name: true, duration_minutes: true, price: true } },
+  assignedUser: { columns: { id: true, name: true } },
+};
+
 export const appointmentRepo = {
   findById: (db, id) =>
     db.query.appointments.findFirst({ where: eq(appointments.id, id) }),
@@ -10,6 +17,30 @@ export const appointmentRepo = {
 
   findAll: (db, conditions, options = {}) =>
     db.query.appointments.findMany({ where: and(...conditions), ...options }),
+
+  // spec 001 RF-36..RF-41: listado acotado a la cuenta, con filtros opcionales y tope de filas.
+  findForList: (db, { accountId, filters = {}, limit }) => {
+    const { status, employeeId, dateFrom, dateTo } = filters;
+    const conditions = [eq(appointments.account_id, accountId)];
+    if (status) conditions.push(eq(appointments.status, status));
+    if (employeeId) conditions.push(eq(appointments.assigned_user_id, employeeId));
+    if (dateFrom) conditions.push(gte(appointments.scheduled_at, dateFrom));
+    if (dateTo) conditions.push(lte(appointments.scheduled_at, dateTo));
+
+    return db.query.appointments.findMany({
+      where: and(...conditions),
+      with: SUMMARY_WITH,
+      orderBy: (a, { asc }) => [asc(a.scheduled_at)],
+      limit,
+    });
+  },
+
+  // spec 001 RF-34 / RF-43: un turno de la cuenta, con la misma proyección resumida.
+  findVisible: (db, { id, accountId }) =>
+    db.query.appointments.findFirst({
+      where: and(eq(appointments.id, id), eq(appointments.account_id, accountId)),
+      with: SUMMARY_WITH,
+    }),
 
   create: (db, data) =>
     db.insert(appointments).values(data).returning().then(r => r[0]),

@@ -2,6 +2,7 @@ export const STATUSES = ['bloqueado', 'agendado', 'en_progreso', 'completado', '
 
 // Manual transitions only — automatic ones (agendado→en_progreso→completado) are handled by cron
 const VALID_TRANSITIONS = {
+  bloqueado: ['cancelado'], // spec 001 RF-46: el bloqueo se libera con baja lógica, nunca DELETE
   agendado: ['cancelado'],
   en_progreso: ['no_llego'],
   completado: ['no_llego'],

@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { db } from '../../db/client.js';
 import * as repos from '../../db/repositories/index.js';
 import publicAuth from '../middleware/publicAuth.js';
+import { createAppointment } from '../../../application/createAppointment.js';
 import { rescheduleAppointment } from '../../../application/rescheduleAppointment.js';
 
 const router = express.Router();
@@ -11,6 +12,23 @@ const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
 // ponytail: 20 req/15min per IP — tighten if brute-force becomes a concern
 router.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, message: { error: 'too_many_requests' } }));
+
+// Booking público — sin JWT (el cliente aún no tiene token). Bajo el rate-limit del grupo.
+// spec 001 D-P2: se movió acá desde POST /appointments para liberar esa ruta al panel.
+router.post('/bookings', wrap(async (req, res) => {
+  const { account_id, service_id, scheduled_at, client_id, client, employee_id, notes } = req.body;
+  if (!account_id || !service_id || !scheduled_at) throw httpErr(400, 'missing_fields');
+  if (!client_id && !client) throw httpErr(400, 'client_required');
+
+  const result = await db.transaction(async (tx) =>
+    createAppointment(tx, {
+      accountId: account_id, serviceId: service_id, scheduledAt: scheduled_at,
+      clientId: client_id, clientData: client, employeeId: employee_id, notes,
+    }, repos),
+  );
+
+  res.status(201).json(result);
+}));
 
 router.patch('/appointments/:id/cancel', publicAuth, wrap(async (req, res) => {
   const appointment = await repos.appointments.findById(db, req.params.id);

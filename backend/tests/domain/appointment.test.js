@@ -7,6 +7,7 @@ test('transiciones válidas', () => {
   assert.ok(canTransition('en_progreso', 'no_llego'));
   assert.ok(canTransition('completado', 'no_llego'));
   assert.ok(canTransition('no_llego', 'completado'));
+  assert.ok(canTransition('bloqueado', 'cancelado')); // spec 001 RF-46: baja lógica del bloqueo
 });
 
 test('transiciones inválidas', () => {
