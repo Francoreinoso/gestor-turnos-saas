@@ -44,7 +44,7 @@ router.post('/login', wrap(async (req, res) => {
   if (!email || !password) throw httpErr(400, 'missing_fields');
 
   const user = await userRepo.findByEmail(db, normalizeEmail(email));
-  if (!user) throw httpErr(401, 'invalid_credentials');
+  if (!user || user.status !== 'activo') throw httpErr(401, 'invalid_credentials'); // spec 002: no filtra pendiente/inactivo
 
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) throw httpErr(401, 'invalid_credentials');

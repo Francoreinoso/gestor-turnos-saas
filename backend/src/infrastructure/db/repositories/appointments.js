@@ -1,4 +1,4 @@
-import { eq, and, ne, lt, gt, lte, gte, isNull, or } from 'drizzle-orm';
+import { eq, and, ne, lt, gt, lte, gte, isNull, or, inArray } from 'drizzle-orm';
 import { appointments } from '../../../../db/schema.js';
 
 // Proyección resumida compartida por listado y detalle (spec 001 RF-36 / RF-43).
@@ -62,6 +62,17 @@ export const appointmentRepo = {
         gt(appointments.scheduled_until, scheduledAt),
       ),
     }),
+
+  // spec 002 RF-26/RF-27: al dar de baja a un trabajador, cancela sus turnos agendados
+  // y bloqueos futuros; no toca lo que ya pasó ni lo que está en un estado terminal.
+  cancelFutureForUser: (db, { userId, now }) =>
+    db.update(appointments)
+      .set({ status: 'cancelado' })
+      .where(and(
+        eq(appointments.assigned_user_id, userId),
+        inArray(appointments.status, ['agendado', 'bloqueado']),
+        gt(appointments.scheduled_at, now),
+      )),
 
   // Finds a conflict for a specific user in the given range
   findUserConflict: (db, accountId, userId, scheduledAt, scheduledUntil) =>

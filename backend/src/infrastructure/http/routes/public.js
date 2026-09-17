@@ -5,6 +5,7 @@ import * as repos from '../../db/repositories/index.js';
 import publicAuth from '../middleware/publicAuth.js';
 import { createAppointment } from '../../../application/createAppointment.js';
 import { rescheduleAppointment } from '../../../application/rescheduleAppointment.js';
+import { activateStaffAccount } from '../../../application/activateStaffAccount.js';
 
 const router = express.Router();
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
@@ -47,6 +48,16 @@ router.patch('/appointments/:id/reschedule', publicAuth, wrap(async (req, res) =
 
   const result = await rescheduleAppointment(db, old, { serviceId: service_id, scheduledAt: scheduled_at, employeeId: employee_id, notes }, repos);
   res.status(201).json(result);
+}));
+
+// spec 002 RF-10, RF-11 — activar la cuenta de un trabajador invitado.
+// Sin publicAuth: el token se valida dentro del use case (D-P7), mismo patrón que /bookings.
+router.post('/staff-invitations/activate', wrap(async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) throw httpErr(400, 'missing_fields');
+
+  const result = await activateStaffAccount(db, { token, password }, repos);
+  res.json(result);
 }));
 
 export default router;

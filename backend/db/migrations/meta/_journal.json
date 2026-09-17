@@ -36,6 +36,13 @@
       "when": 1789000000001,
       "tag": "0004_spec_001_block_cancel_nullability",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790000000000,
+      "tag": "0005_spec_002_staff_management",
+      "breakpoints": true
     }
   ]
 }

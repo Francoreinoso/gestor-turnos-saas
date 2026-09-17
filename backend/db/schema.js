@@ -2,6 +2,7 @@ import { pgTable, pgEnum, uuid, varchar, text, integer, numeric, boolean, timest
 import { relations, sql } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('role', ['owner', 'staff']);
+export const userStatusEnum = pgEnum('user_status', ['pendiente', 'activo', 'inactivo']);
 export const appointmentStatusEnum = pgEnum('appointment_status', [
   'bloqueado', 'agendado', 'en_progreso', 'completado', 'no_llego', 'cancelado',
 ]);
@@ -19,8 +20,11 @@ export const users = pgTable('users', {
   account_id: uuid('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  password_hash: varchar('password_hash', { length: 255 }).notNull(),
+  // NULL mientras status='pendiente' — un trabajador invitado todavía no definió contraseña (spec 002 RF-1)
+  password_hash: varchar('password_hash', { length: 255 }),
   role: roleEnum('role').notNull(),
+  status: userStatusEnum('status').notNull().default('activo'),
+  // Rango [0,1] ya reforzado en la DB por "users_commission_rate_check" (migración 0002) — RF-4 no necesita un CHECK nuevo.
   commission_rate: numeric('commission_rate', { precision: 5, scale: 4 }),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
@@ -94,6 +98,17 @@ export const appointmentAccessTokens = pgTable('appointment_access_tokens', {
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 });
 
+export const staffInvitationTokens = pgTable('staff_invitation_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  user_id: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  // SHA-256 of the actual token — raw token never stored
+  token_hash: varchar('token_hash', { length: 64 }).notNull(),
+  expires_at: timestamp('expires_at').notNull(),
+  // NULL = todavía válido; set al activarse o al ser invalidado por una invitación más nueva (spec 002 RF-8/RF-12)
+  used_at: timestamp('used_at'),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const payments = pgTable('payments', {
   id: uuid('id').primaryKey().defaultRandom(),
   appointment_id: uuid('appointment_id').notNull().references(() => appointments.id, { onDelete: 'restrict' }),
@@ -118,6 +133,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   account: one(accounts, { fields: [users.account_id], references: [accounts.id] }),
   availability: many(availability),
   appointments: many(appointments, { relationName: 'assignedUser' }),
+  invitationTokens: many(staffInvitationTokens),
 }));
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
@@ -152,6 +168,10 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
 
 export const appointmentAccessTokensRelations = relations(appointmentAccessTokens, ({ one }) => ({
   appointment: one(appointments, { fields: [appointmentAccessTokens.appointment_id], references: [appointments.id] }),
+}));
+
+export const staffInvitationTokensRelations = relations(staffInvitationTokens, ({ one }) => ({
+  user: one(users, { fields: [staffInvitationTokens.user_id], references: [users.id] }),
 }));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({

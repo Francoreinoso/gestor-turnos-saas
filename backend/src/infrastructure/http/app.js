@@ -7,6 +7,8 @@ import serviceRoutes from './routes/services.js';
 import clientRoutes from './routes/clients.js';
 import availabilityRoutes from './routes/availability.js';
 import publicRoutes from './routes/public.js';
+import staffRoutes from './routes/staff.js';
+import meRoutes from './routes/me.js';
 import { startCron } from '../integrations/cron.js';
 
 const app = express();
@@ -19,6 +21,8 @@ app.use('/services', serviceRoutes);
 app.use('/clients', clientRoutes);
 app.use('/availability', availabilityRoutes);
 app.use('/public', publicRoutes);
+app.use('/staff', staffRoutes);
+app.use('/me', meRoutes);
 
 app.use((err, req, res, _next) => {
   res.status(err.status || 500).json({ error: err.message || 'internal_error' });

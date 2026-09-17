@@ -5,3 +5,5 @@ export { paymentRepo as payments } from './payments.js';
 export { serviceRepo as services } from './services.js';
 export { userRepo as users } from './users.js';
 export { tokenRepo as tokens } from './tokens.js';
+export { staffInvitationTokenRepo as invitationTokens } from './staffInvitationTokens.js';
+export { emailService as email } from '../../integrations/email.js';

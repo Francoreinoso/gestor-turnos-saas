@@ -1,0 +1,25 @@
+import { generateAccessToken } from '../domain/token.js';
+
+const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
+const TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
+
+// spec 002 — reenvío explícito de la invitación: RF-12, RF-13.
+export const resendStaffInvitation = async (db, { id, accountId, actor }, repos) => {
+  if (actor.role === 'staff') throw httpErr(403, 'forbidden');
+
+  const user = await repos.users.findVisible(db, { id, accountId });
+  if (!user) throw httpErr(404, 'not_found'); // RF-34
+  if (user.status !== 'pendiente') throw httpErr(422, 'invalid_status_transition'); // RF-13
+
+  return db.transaction(async (tx) => {
+    await repos.invitationTokens.invalidateAllForUser(tx, user.id); // RF-12
+    const { token, hash } = generateAccessToken();
+    await repos.invitationTokens.create(tx, {
+      user_id: user.id,
+      token_hash: hash,
+      expires_at: new Date(Date.now() + TOKEN_TTL_MS),
+    });
+    await repos.email.sendInvitation({ to: user.email, link: token }); // RF-15 aplica igual
+    return { user };
+  });
+};
