@@ -12,6 +12,7 @@ import { createAppointmentFromPanel } from '../../src/application/createAppointm
 import { editAppointment } from '../../src/application/editAppointment.js';
 import { cancelAppointment } from '../../src/application/cancelAppointment.js';
 import { cancelBlock } from '../../src/application/cancelBlock.js';
+import { correctAppointment } from '../../src/application/correctAppointment.js';
 import { eq, and } from 'drizzle-orm';
 import { clients, users, services, availability, appointments, payments } from '../../db/schema.js';
 
@@ -345,5 +346,73 @@ test('RF-12: la DB rechaza un servicio con duración 0', async () => {
       () => db.insert(services).values({ account_id: acc.id, name: 'Cero', duration_minutes: 0, price: '10.00' }),
       (err) => /services_duration_positive/.test(err.cause?.message ?? err.message),
     );
+  });
+});
+
+// ─── T19 (spec 003) · ventana de corrección completado↔no_llego ─────────────
+
+async function seedAppointment(db, accountId, { userId, clientId, serviceId, scheduledAt, status }) {
+  return db.insert(appointments).values({
+    account_id: accountId, assigned_user_id: userId, client_id: clientId, service_id: serviceId,
+    scheduled_at: scheduledAt, scheduled_until: new Date(scheduledAt.getTime() + HOUR), status,
+  }).returning().then(r => r[0]);
+}
+
+test('spec 003 RF-19: completado→no_llego dentro de ventana (hoy) → ok, borra el pago', async () => {
+  await withAccount(async (acc) => {
+    const [user, client, service] = await Promise.all([seedUser(db, acc.id), seedClient(db, acc.id), seedService(db, acc.id)]);
+    const { appointment } = await createAppointmentFromPanel(db, {
+      accountId: acc.id, actor: owner, serviceId: service.id, clientId: client.id,
+      employeeId: user.id, scheduledAt: new Date(Date.now() - 3 * HOUR).toISOString(),
+    }, repos); // nace completado (RF-9), con su pago
+
+    const updated = await correctAppointment(db, { id: appointment.id, accountId: acc.id, now: new Date() }, repos);
+    assert.equal(updated.status, 'no_llego');
+    const pays = await db.select().from(payments).where(eq(payments.appointment_id, appointment.id));
+    assert.equal(pays.length, 0);
+  });
+});
+
+test('spec 003 RF-19: completado→no_llego tres días después → 422, el pago no se toca', async () => {
+  await withAccount(async (acc) => {
+    const [user, client, service] = await Promise.all([seedUser(db, acc.id), seedClient(db, acc.id), seedService(db, acc.id)]);
+    const scheduledAt = new Date(Date.now() - 3 * 24 * HOUR);
+    const appointment = await seedAppointment(db, acc.id, { userId: user.id, clientId: client.id, serviceId: service.id, scheduledAt, status: 'completado' });
+    await db.insert(payments).values({ account_id: acc.id, appointment_id: appointment.id, assigned_user_id: user.id, amount: '50.00' });
+
+    await assert.rejects(
+      () => correctAppointment(db, { id: appointment.id, accountId: acc.id, now: new Date() }, repos),
+      { status: 422, message: 'correction_window_expired' },
+    );
+    const pays = await db.select().from(payments).where(eq(payments.appointment_id, appointment.id));
+    assert.equal(pays.length, 1); // sigue existiendo, no se tocó
+  });
+});
+
+test('spec 003 RF-20: no_llego→completado dentro de ventana (hoy) → ok, crea el pago', async () => {
+  await withAccount(async (acc) => {
+    const [user, client, service] = await Promise.all([seedUser(db, acc.id), seedClient(db, acc.id), seedService(db, acc.id)]);
+    const scheduledAt = new Date(Date.now() - 3 * HOUR);
+    const appointment = await seedAppointment(db, acc.id, { userId: user.id, clientId: client.id, serviceId: service.id, scheduledAt, status: 'no_llego' });
+
+    const updated = await correctAppointment(db, { id: appointment.id, accountId: acc.id, now: new Date() }, repos);
+    assert.equal(updated.status, 'completado');
+    const pays = await db.select().from(payments).where(eq(payments.appointment_id, appointment.id));
+    assert.equal(pays.length, 1);
+  });
+});
+
+test('spec 003 RF-20: no_llego→completado tres días después → 422 también en sentido inverso, sin crear pago', async () => {
+  await withAccount(async (acc) => {
+    const [user, client, service] = await Promise.all([seedUser(db, acc.id), seedClient(db, acc.id), seedService(db, acc.id)]);
+    const scheduledAt = new Date(Date.now() - 3 * 24 * HOUR);
+    const appointment = await seedAppointment(db, acc.id, { userId: user.id, clientId: client.id, serviceId: service.id, scheduledAt, status: 'no_llego' });
+
+    await assert.rejects(
+      () => correctAppointment(db, { id: appointment.id, accountId: acc.id, now: new Date() }, repos),
+      { status: 422, message: 'correction_window_expired' },
+    );
+    const pays = await db.select().from(payments).where(eq(payments.appointment_id, appointment.id));
+    assert.equal(pays.length, 0); // no se creó nada
   });
 });

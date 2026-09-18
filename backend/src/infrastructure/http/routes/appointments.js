@@ -1,11 +1,8 @@
 import express from 'express';
-import { eq } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import * as repos from '../../db/repositories/index.js';
-import { appointments } from '../../../../db/schema.js';
 import auth from '../middleware/auth.js';
-import { createPayment } from '../../../application/createPayment.js';
-import { assertTransition } from '../../../domain/appointment.js';
+import { correctAppointment } from '../../../application/correctAppointment.js';
 import { createAppointmentFromPanel } from '../../../application/createAppointmentFromPanel.js';
 import { editAppointment } from '../../../application/editAppointment.js';
 import { cancelAppointment } from '../../../application/cancelAppointment.js';
@@ -116,27 +113,14 @@ router.patch('/:id/cancel-block', auth, wrap(async (req, res) => {
   res.json(updated);
 }));
 
+// spec 001 (comportamiento existente) + spec 003 RF-19/RF-20 — ventana de
+// corrección de un día calendario UTC, en ambos sentidos.
 router.patch('/:id/correct', auth, wrap(async (req, res) => {
-  const appointment = await repos.appointments.findOne(db, [
-    eq(appointments.id, req.params.id),
-    eq(appointments.account_id, req.user.account_id),
-  ]);
-
-  if (!appointment) throw httpErr(404, 'not_found');
-
-  const next = appointment.status === 'completado' ? 'no_llego' : 'completado';
-  assertTransition(appointment.status, next);
-
-  const updated = await db.transaction(async (tx) => {
-    const result = await repos.appointments.update(tx, appointment.id, { status: next });
-    if (next === 'completado') {
-      await createPayment(tx, appointment, repos);
-    } else {
-      await repos.payments.deleteByAppointment(tx, appointment.id);
-    }
-    return result;
-  });
-
+  const updated = await correctAppointment(db, {
+    id: req.params.id,
+    accountId: req.user.account_id,
+    now: new Date(),
+  }, repos);
   res.json(updated);
 }));
 

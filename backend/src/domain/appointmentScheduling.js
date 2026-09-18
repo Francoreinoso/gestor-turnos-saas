@@ -19,3 +19,17 @@ export const resolveInitialStatus = (endsAt, now) =>
 // Solapamiento con intervalos semiabiertos [inicio, fin): dos turnos adyacentes no se solapan.
 export const overlaps = (aStart, aEnd, bStart, bEnd) =>
   aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
+
+// spec 003 RF-19/RF-20: la corrección completado↔no_llego solo vale hasta el
+// día calendario UTC siguiente al del turno; pasado eso, rechaza (422).
+export const assertCorrectionWindow = (scheduledAt, now) => {
+  const windowEnd = new Date(Date.UTC(
+    scheduledAt.getUTCFullYear(), scheduledAt.getUTCMonth(), scheduledAt.getUTCDate() + 1,
+    23, 59, 59, 999,
+  ));
+  if (now.getTime() > windowEnd.getTime()) {
+    const err = new Error('correction_window_expired');
+    err.status = 422;
+    throw err;
+  }
+};

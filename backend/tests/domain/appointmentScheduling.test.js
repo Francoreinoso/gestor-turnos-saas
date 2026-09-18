@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeEndsAt, resolveInitialStatus, overlaps } from '../../src/domain/appointmentScheduling.js';
+import { computeEndsAt, resolveInitialStatus, overlaps, assertCorrectionWindow } from '../../src/domain/appointmentScheduling.js';
 
 test('computeEndsAt suma la duración en minutos al inicio', () => {
   const start = new Date('2026-09-01T10:00:00Z');
@@ -31,4 +31,32 @@ test('overlaps: intervalos semiabiertos [inicio, fin) — adyacentes no solapan'
   const pisado = [new Date('2026-09-01T10:30:00Z'), new Date('2026-09-01T11:30:00Z')];
   assert.equal(overlaps(...a, ...adyacente), false);
   assert.equal(overlaps(...a, ...pisado), true);
+});
+
+// spec 003 RF-19/RF-20 — ventana de corrección completado↔no_llego: hasta el
+// día calendario UTC siguiente al del turno, en ambos sentidos.
+test('assertCorrectionWindow: mismo día del turno → no lanza', () => {
+  const scheduledAt = new Date('2026-09-17T10:00:00Z');
+  assert.doesNotThrow(() => assertCorrectionWindow(scheduledAt, new Date('2026-09-17T23:00:00Z')));
+});
+
+test('assertCorrectionWindow: día calendario siguiente, hasta el último milisegundo → no lanza', () => {
+  const scheduledAt = new Date('2026-09-17T10:00:00Z');
+  assert.doesNotThrow(() => assertCorrectionWindow(scheduledAt, new Date('2026-09-18T23:59:59.999Z')));
+});
+
+test('assertCorrectionWindow: un milisegundo después de la ventana → 422', () => {
+  const scheduledAt = new Date('2026-09-17T10:00:00Z');
+  assert.throws(
+    () => assertCorrectionWindow(scheduledAt, new Date('2026-09-19T00:00:00.000Z')),
+    { message: 'correction_window_expired', status: 422 },
+  );
+});
+
+test('assertCorrectionWindow: tres días después → 422', () => {
+  const scheduledAt = new Date('2026-09-17T10:00:00Z');
+  assert.throws(
+    () => assertCorrectionWindow(scheduledAt, new Date('2026-09-20T10:00:00Z')),
+    { message: 'correction_window_expired', status: 422 },
+  );
 });

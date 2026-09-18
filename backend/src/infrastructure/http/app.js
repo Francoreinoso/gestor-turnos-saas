@@ -9,6 +9,7 @@ import availabilityRoutes from './routes/availability.js';
 import publicRoutes from './routes/public.js';
 import staffRoutes from './routes/staff.js';
 import meRoutes from './routes/me.js';
+import paymentRoutes from './routes/payments.js';
 import { startCron } from '../integrations/cron.js';
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/availability', availabilityRoutes);
 app.use('/public', publicRoutes);
 app.use('/staff', staffRoutes);
 app.use('/me', meRoutes);
+app.use('/payments', paymentRoutes);
 
 app.use((err, req, res, _next) => {
   res.status(err.status || 500).json({ error: err.message || 'internal_error' });
