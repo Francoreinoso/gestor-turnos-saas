@@ -9,15 +9,6 @@ export const appointmentsService = {
 
   get: (id: string) => api.get<Appointment>(`/appointments/${id}`),
 
-  create: (body: {
-    account_id: string;
-    service_id: string;
-    scheduled_at: string;
-    client_id?: string;
-    employee_id?: string;
-    notes?: string;
-  }) => api.post<{ appointment: Appointment; access_token: string }>('/appointments', body),
-
   cancel: (id: string) => api.patch(`/appointments/${id}/cancel`),
 
   correct: (id: string) => api.patch<Appointment>(`/appointments/${id}/correct`),

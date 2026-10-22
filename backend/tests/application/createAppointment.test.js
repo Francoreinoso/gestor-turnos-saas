@@ -29,6 +29,8 @@ const makeRepos = (overrides = {}) => ({
 
 // db stub — no hace nada real
 const db = {};
+// spec 005 RF-10: las fechas fijas de estos tests ya son pasado; se fija un `now` anterior.
+const now = new Date('2026-01-01T00:00:00Z');
 
 test('crea un turno con profesional provisto', async () => {
   const repos = makeRepos();
@@ -36,6 +38,7 @@ test('crea un turno con profesional provisto', async () => {
     accountId: 'acc-1',
     serviceId: 'svc-1',
     scheduledAt: new Date('2026-09-01T10:00:00Z'),
+    now,
     clientId: 'cli-1',
     employeeId: 'usr-1',
   }, repos);
@@ -54,6 +57,7 @@ test('lanza 409 si no hay profesional disponible', async () => {
       accountId: 'acc-1',
       serviceId: 'svc-1',
       scheduledAt: new Date('2026-09-01T10:00:00Z'),
+      now,
       clientId: 'cli-1',
       // sin employeeId — fuerza auto-asignación
     }, repos),
@@ -71,9 +75,50 @@ test('lanza 404 si el servicio no existe', async () => {
       accountId: 'acc-1',
       serviceId: 'svc-x',
       scheduledAt: new Date('2026-09-01T10:00:00Z'),
+      now,
       clientId: 'cli-1',
       employeeId: 'usr-1',
     }, repos),
     { message: 'service_not_found', status: 404 }
   );
+});
+
+// spec 005 RF-10 / RF-10b
+test('RF-10: inicio pasado → 422 appointment_in_past y ningún repo es llamado', async () => {
+  const touched = [];
+  const spy = (name, ret) => async () => { touched.push(name); return ret; };
+  const repos = makeRepos({
+    services: { findActive: spy('services.findActive', { id: 'svc-1', duration_minutes: 60 }) },
+    clients: { findOrCreate: spy('clients.findOrCreate', { id: 'cli-1' }) },
+    appointments: { create: spy('appointments.create', {}), findBusinessBlock: spy('findBusinessBlock', null), findUserConflict: spy('findUserConflict', null) },
+    tokens: { create: spy('tokens.create') },
+  });
+
+  await assert.rejects(
+    () => createAppointment(db, {
+      accountId: 'acc-1', serviceId: 'svc-1', clientData: { name: 'X', email: 'x@y.com' },
+      scheduledAt: new Date('2026-09-01T10:00:00Z'), now: new Date('2026-09-01T10:00:00Z'),
+    }, repos),
+    { message: 'appointment_in_past', status: 422 },
+  );
+  assert.deepEqual(touched, []);
+});
+
+test('RF-10b: scheduledAt inválido → 400 invalid_scheduled_at sin escribir nada', async () => {
+  let wrote = false;
+  const repos = makeRepos({ appointments: { create: async () => { wrote = true; } } });
+  for (const bad of ['x', null, undefined]) {
+    await assert.rejects(
+      () => createAppointment(db, { accountId: 'acc-1', serviceId: 'svc-1', scheduledAt: bad, clientId: 'cli-1', employeeId: 'usr-1', now }, repos),
+      { message: 'invalid_scheduled_at', status: 400 },
+    );
+  }
+  assert.equal(wrote, false);
+});
+
+test('RF-10: acepta scheduledAt como string ISO futuro', async () => {
+  const { appointment } = await createAppointment(db, {
+    accountId: 'acc-1', serviceId: 'svc-1', scheduledAt: '2026-09-01T10:00:00Z', clientId: 'cli-1', employeeId: 'usr-1', now,
+  }, makeRepos());
+  assert.deepEqual(appointment.scheduled_at, new Date('2026-09-01T10:00:00Z'));
 });

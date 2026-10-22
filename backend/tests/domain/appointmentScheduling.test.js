@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeEndsAt, resolveInitialStatus, overlaps, assertCorrectionWindow } from '../../src/domain/appointmentScheduling.js';
+import { computeEndsAt, resolveInitialStatus, overlaps, assertCorrectionWindow, assertScheduledAtNotPast } from '../../src/domain/appointmentScheduling.js';
 
 test('computeEndsAt suma la duración en minutos al inicio', () => {
   const start = new Date('2026-09-01T10:00:00Z');
@@ -59,4 +59,25 @@ test('assertCorrectionWindow: tres días después → 422', () => {
     () => assertCorrectionWindow(scheduledAt, new Date('2026-09-20T10:00:00Z')),
     { message: 'correction_window_expired', status: 422 },
   );
+});
+
+// spec 005 RF-10 / RF-10b
+test('assertScheduledAtNotPast: inicio pasado o igual a now → 422 appointment_in_past', () => {
+  const now = new Date('2026-09-01T12:00:00Z');
+  assert.throws(() => assertScheduledAtNotPast('2026-09-01T11:59:00Z', now), { message: 'appointment_in_past', status: 422 });
+  assert.throws(() => assertScheduledAtNotPast('2026-09-01T12:00:00Z', now), { message: 'appointment_in_past', status: 422 });
+});
+
+test('assertScheduledAtNotPast: futuro → devuelve el Date parseado (string o Date)', () => {
+  const now = new Date('2026-09-01T12:00:00Z');
+  assert.deepEqual(assertScheduledAtNotPast('2026-09-01T12:01:00Z', now), new Date('2026-09-01T12:01:00Z'));
+  const d = new Date('2026-09-02T10:00:00Z');
+  assert.deepEqual(assertScheduledAtNotPast(d, now), d);
+});
+
+test('assertScheduledAtNotPast: valor que no es un instante ISO válido → 400 invalid_scheduled_at', () => {
+  const now = new Date('2026-09-01T12:00:00Z');
+  for (const bad of ['x', '', null, undefined, 123, {}, new Date('nope')]) {
+    assert.throws(() => assertScheduledAtNotPast(bad, now), { message: 'invalid_scheduled_at', status: 400 });
+  }
 });

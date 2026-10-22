@@ -33,3 +33,20 @@ export const assertCorrectionWindow = (scheduledAt, now) => {
     throw err;
   }
 };
+
+// spec 005 RF-10 / RF-10b: las rutas públicas no ofrecen ni aceptan inicios en el pasado.
+// Devuelve el inicio ya parseado; un valor que no es string/Date ISO válido → 400, inicio <= now → 422.
+export const assertScheduledAtNotPast = (value, now) => {
+  const start = typeof value === 'string' || value instanceof Date ? new Date(value) : new Date(NaN);
+  if (Number.isNaN(start.getTime())) {
+    const err = new Error('invalid_scheduled_at');
+    err.status = 400;
+    throw err;
+  }
+  if (start.getTime() <= now.getTime()) {
+    const err = new Error('appointment_in_past');
+    err.status = 422;
+    throw err;
+  }
+  return start;
+};

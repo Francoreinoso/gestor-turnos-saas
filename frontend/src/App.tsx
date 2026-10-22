@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { roleHome } from './utils/token';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import BookingPage from './pages/BookingPage';
+import ManagePage from './pages/ManagePage';
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -36,6 +38,9 @@ export default function App() {
           <Route path="/login"        element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/owner/agenda" element={<OwnerRoute><DashboardPage /></OwnerRoute>} />
           <Route path="/staff/agenda" element={<StaffRoute><DashboardPage /></StaffRoute>} />
+          {/* spec 005 RF-32: públicas, con o sin sesión y sin redirigir por rol */}
+          <Route path="/reservar/:accountId" element={<BookingPage />} />
+          <Route path="/turno/:id"    element={<ManagePage />} />
           <Route path="*"             element={<RootRedirect />} />
         </Routes>
       </BrowserRouter>

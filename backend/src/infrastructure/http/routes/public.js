@@ -5,18 +5,34 @@ import * as repos from '../../db/repositories/index.js';
 import publicAuth from '../middleware/publicAuth.js';
 import { createAppointment } from '../../../application/createAppointment.js';
 import { rescheduleAppointment } from '../../../application/rescheduleAppointment.js';
+import { getPublicAccount } from '../../../application/getPublicAccount.js';
+import { getPublicAppointment } from '../../../application/getPublicAppointment.js';
 import { activateStaffAccount } from '../../../application/activateStaffAccount.js';
 
 const router = express.Router();
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
+// spec 005 RF-8 / D-P4: dos limitadores aplicados por ruta (no router.use), cada uno con su propio cupo por IP.
+// strictLimiter frena fuerza bruta sobre tokens en las escrituras; readLimiter es para las lecturas que no modifican nada.
+const WINDOW_MS = 15 * 60 * 1000;
 // ponytail: 20 req/15min per IP — tighten if brute-force becomes a concern
-router.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, message: { error: 'too_many_requests' } }));
+const strictLimiter = rateLimit({ windowMs: WINDOW_MS, limit: 20, message: { error: 'too_many_requests' } });
+const readLimiter = rateLimit({ windowMs: WINDOW_MS, limit: 120, message: { error: 'too_many_requests' } });
 
-// Booking público — sin JWT (el cliente aún no tiene token). Bajo el rate-limit del grupo.
+// spec 005 RF-1..RF-4 — nombre, servicios activos y profesionales activos del negocio. Sin autenticación.
+router.get('/accounts/:id', readLimiter, wrap(async (req, res) => {
+  res.json(await getPublicAccount(db, { id: req.params.id }, repos));
+}));
+
+// spec 005 RF-5..RF-7 — el turno del enlace de gestión (publicAuth valida el token).
+router.get('/appointments/:id', readLimiter, publicAuth, wrap(async (req, res) => {
+  res.json(await getPublicAppointment(db, { id: req.params.id }, repos));
+}));
+
+// Booking público — sin JWT (el cliente aún no tiene token).
 // spec 001 D-P2: se movió acá desde POST /appointments para liberar esa ruta al panel.
-router.post('/bookings', wrap(async (req, res) => {
+router.post('/bookings', strictLimiter, wrap(async (req, res) => {
   const { account_id, service_id, scheduled_at, client_id, client, employee_id, notes } = req.body;
   if (!account_id || !service_id || !scheduled_at) throw httpErr(400, 'missing_fields');
   if (!client_id && !client) throw httpErr(400, 'client_required');
@@ -31,7 +47,7 @@ router.post('/bookings', wrap(async (req, res) => {
   res.status(201).json(result);
 }));
 
-router.patch('/appointments/:id/cancel', publicAuth, wrap(async (req, res) => {
+router.patch('/appointments/:id/cancel', strictLimiter, publicAuth, wrap(async (req, res) => {
   const appointment = await repos.appointments.findById(db, req.params.id);
   if (!appointment || appointment.status !== 'agendado') throw httpErr(422, 'invalid_status_transition');
 
@@ -39,7 +55,7 @@ router.patch('/appointments/:id/cancel', publicAuth, wrap(async (req, res) => {
   res.json({ message: 'appointment_cancelled' });
 }));
 
-router.patch('/appointments/:id/reschedule', publicAuth, wrap(async (req, res) => {
+router.patch('/appointments/:id/reschedule', strictLimiter, publicAuth, wrap(async (req, res) => {
   const { service_id, scheduled_at, employee_id, notes } = req.body;
   if (!scheduled_at) throw httpErr(400, 'missing_fields');
 
@@ -52,7 +68,7 @@ router.patch('/appointments/:id/reschedule', publicAuth, wrap(async (req, res) =
 
 // spec 002 RF-10, RF-11 — activar la cuenta de un trabajador invitado.
 // Sin publicAuth: el token se valida dentro del use case (D-P7), mismo patrón que /bookings.
-router.post('/staff-invitations/activate', wrap(async (req, res) => {
+router.post('/staff-invitations/activate', strictLimiter, wrap(async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) throw httpErr(400, 'missing_fields');
 

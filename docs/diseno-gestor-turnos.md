@@ -154,7 +154,7 @@ Si el cliente no elige un profesional específico, el sistema auto-asigna uno di
 
 Un cliente recibe un link (por WhatsApp/email) para cancelar o reprogramar su turno sin necesitar cuenta ni contraseña. La seguridad no depende de que el cliente recuerde/tipee un dato (fricción de UX + vulnerable a fuerza bruta si el `id` del turno es predecible) sino de que el link mismo contenga un token aleatorio de alta entropía (`crypto.randomBytes`, no un hash derivado de datos conocidos — un hash de `appointment_id` sería adivinable). Se guarda en base de datos el hash del token (SHA-256, no bcrypt — el token ya nace con entropía suficiente y no necesita ralentización artificial), nunca el token en texto plano, para que un acceso no autorizado a la base de datos no habilite tomar control de turnos ajenos. El token vive en tabla propia (no en una columna de `appointments`) para poder loguear múltiples tokens emitidos por turno (reenvíos) e invalidar los anteriores. Vence en función de la cercanía al turno (no un plazo fijo), para asegurar que cancelar/reprogramar se haga con anticipación razonable.
 
-Todas las rutas que aceptan este mecanismo (sin JWT) se agrupan bajo el prefijo `/public/...`, para poder aplicarles de forma centralizada un middleware de seguridad reforzado (rate-limiting estricto) a todo el grupo, en vez de por ruta individual.
+Todas las rutas que aceptan este mecanismo (sin JWT) se agrupan bajo el prefijo `/public/...`, para tenerlas identificadas y limitadas por IP. Desde la spec 005 hay **dos limitadores**, aplicados por ruta (no a todo el grupo): uno estricto (20 solicitudes / 15 min) en las escrituras y en la activación de cuenta —reservar, cancelar, reprogramar, `staff-invitations/activate`—, que es el que frena la fuerza bruta sobre tokens; y otro laxo (120 / 15 min) en las dos lecturas públicas, que no modifican nada. Cada uno lleva su propio cupo. Superado el tope: 429 `too_many_requests`.
 
 ### 3.10 Autorización por rol (`owner` vs `staff`)
 
@@ -186,10 +186,15 @@ Diferencias funcionales `owner` vs `staff`:
 | POST | `/appointments` | Crear una reserva | cliente |
 | POST | `/appointments/block` | Crear un bloqueo | admin/profesional (requiere auth) |
 | PATCH | `/appointments/:id/cancel` | Cancelar turno de cliente (preserva la fila) | profesional/admin, con JWT |
+| POST | `/public/bookings` | Reservar sin login (cliente find-or-create, profesional autoasignado si no se envía `employee_id`). Inicio en el pasado → 422 `appointment_in_past`; fecha inválida → 400 `invalid_scheduled_at`. Devuelve `{ appointment, access_token }` | público |
+| GET | `/public/accounts/:id` | Nombre del negocio, servicios activos (`id`, `name`, `duration_minutes`, `price`) y profesionales activos (`id`, `name`), ordenados por nombre. Nada más (sin emails ni comisiones). Id inexistente o no UUID → 404 | público |
+| GET | `/public/appointments/:id?token=` | El turno del enlace de gestión: `id`, `account_id`, `status`, `scheduled_at`, `scheduled_until`, `service`, `professional`, `business_name`. Sin datos del cliente. Token faltante/incorrecto/id inexistente o no UUID → 401 `unauthorized`; vencido → 401 `token_expired` | cliente, vía token de acceso |
 | PATCH | `/public/appointments/:id/cancel?token=` | Cancelar turno, sin login | cliente, vía token de acceso |
 | PATCH | `/appointments/:id/cancel-block` | Liberar un bloqueo | admin/profesional |
 | PATCH | `/public/appointments/:id/reschedule?token=` | Reprogramar (transacción: cancela vieja + crea nueva), sin login | cliente, vía token de acceso |
 | PATCH | `/appointments/:id/correct` | Corregir `completado` ↔ `no_llego` | profesional |
+
+*Spec 005. El token vence 2 horas antes del inicio del turno. Reprogramar a un inicio pasado → 422 `appointment_in_past` y el turno original queda intacto. El panel (`POST /appointments`) conserva su permiso de cargar turnos pasados (spec 001).*
 
 *Nota: cancelar/reprogramar por parte del cliente usa el prefijo `/public` (autenticación por token, no JWT); las acciones de profesional/admin usan JWT tradicional. Mismo recurso, dos mecanismos de auth distintos → dos rutas separadas.*
 
@@ -202,6 +207,8 @@ Diferencias funcionales `owner` vs `staff`:
 | PUT | `/staff/:id/availability` | Reemplaza el horario completo en una transacción (`[]` lo vacía). Valida forma (400), valores y solapamiento (422); trabajador `inactivo` → 422 | owner / staff (solo el propio) |
 
 *Spec 004. Fuera de alcance o ajeno → 404 (incluido el id de un owner: no atiende turnos, no tiene horario). El no-solapamiento de ventanas lo garantiza un `EXCLUDE` en la base (migración 0006). Cambiar el horario no toca turnos ya agendados.*
+
+*Spec 005: nunca devuelve horarios con inicio anterior o igual al momento actual.*
 
 *Pendiente de decisión de producto: si `service_id` es obligatorio u opcional (afecta si se devuelven bloques ya cortados por duración, o un rango libre sin cortar).*
 
@@ -230,6 +237,16 @@ Diferencias funcionales `owner` vs `staff`:
 *Pendiente: endpoint de "fusionar clientes duplicados" para los casos que la unicidad normalizada no capture (ej. mismo email con dominios distintos por error de tipeo).*
 
 ---
+
+### Rutas del frontend (spec 005)
+
+| Ruta | Pantalla | Acceso |
+|---|---|---|
+| `/reservar/:accountId` | Reserva pública en pasos: servicio → profesional → día y horario → datos → confirmación (devuelve el enlace de gestión) | público, con o sin sesión |
+| `/turno/:id?token=` | Ver, cancelar o reprogramar un turno desde su enlace de gestión. El token vive solo en la URL; nunca se guarda en el navegador | público, con o sin sesión |
+| `/login`, `/owner/agenda`, `/staff/agenda` | Panel autenticado | según rol |
+
+*Las pantallas públicas usan `apiPublic` (sin JWT y sin cerrar sesión ante un 401), de modo que un owner logueado que prueba la reserva no pierde su sesión.*
 
 ## 5. Setup técnico
 
@@ -268,6 +285,9 @@ gestor-turnos/
 ```
 
 ## 6. Pendiente
+
+- **Zonas horarias por negocio** (candidato a spec 006): los horarios libres se calculan en la hora local del servidor y el frontend asume que navegador y servidor están en la misma zona.
+- **Envío del enlace de gestión** por email/WhatsApp (`notifications`): hoy el cliente lo recibe solo en pantalla, al reservar o reprogramar.
 
 - **`payments`, `notifications`, `attachments`**: definidos en el ERD inicial, sin especificación de endpoints todavía.
 - Implementación de JWT (middleware, expiración, refresh tokens) — el diseño de *qué* autoriza cada rol ya está resuelto; falta el detalle de implementación del propio JWT en sí (esto es más convención que decisión de diseño, y AlojaFacil ya tiene el patrón resuelto para reutilizar).

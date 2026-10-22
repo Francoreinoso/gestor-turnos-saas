@@ -1,14 +1,18 @@
 import { normalizeEmail } from '../domain/client.js';
 import { generateAccessToken } from '../domain/token.js';
+import { assertScheduledAtNotPast } from '../domain/appointmentScheduling.js';
 import { findAvailableProfessional } from './findAvailableProfessional.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
-export const createAppointment = async (db, { accountId, serviceId, scheduledAt, clientData, clientId, employeeId, notes }, repos) => {
+// Caso de uso exclusivo del booking público y la reprogramación: no admite inicios en el pasado (spec 005 RF-10).
+// El panel usa createAppointmentFromPanel, que conserva el permiso de cargar turnos pasados.
+export const createAppointment = async (db, { accountId, serviceId, scheduledAt, clientData, clientId, employeeId, notes, now = new Date() }, repos) => {
+  const start = assertScheduledAtNotPast(scheduledAt, now);
+
   const service = await repos.services.findActive(db, serviceId, accountId);
   if (!service) throw httpErr(404, 'service_not_found');
 
-  const start = new Date(scheduledAt);
   const end = new Date(start.getTime() + service.duration_minutes * 60 * 1000);
 
   let resolvedClientId = clientId;

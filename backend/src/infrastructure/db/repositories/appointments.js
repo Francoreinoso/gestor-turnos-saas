@@ -74,6 +74,18 @@ export const appointmentRepo = {
         gt(appointments.scheduled_at, now),
       )),
 
+  // spec 005 RF-9: turnos no cancelados que solapan [from, to), con las columnas mínimas para calcular disponibilidad.
+  findTakenSlots: (db, { accountId, from, to }) =>
+    db.query.appointments.findMany({
+      where: and(
+        eq(appointments.account_id, accountId),
+        ne(appointments.status, 'cancelado'),
+        lt(appointments.scheduled_at, to),
+        gt(appointments.scheduled_until, from),
+      ),
+      columns: { assigned_user_id: true, scheduled_at: true, scheduled_until: true },
+    }),
+
   // Finds a conflict for a specific user in the given range
   findUserConflict: (db, accountId, userId, scheduledAt, scheduledUntil) =>
     db.query.appointments.findFirst({

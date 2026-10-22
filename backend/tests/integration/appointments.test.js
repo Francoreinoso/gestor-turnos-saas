@@ -279,6 +279,7 @@ test('reprogramación: revierte si el nuevo turno solapa — fila original queda
       () => rescheduleAppointment(db, original, {
         serviceId: service.id,
         scheduledAt: t4,
+        now: new Date('2026-01-01T00:00:00Z'), // spec 005 RF-10: t4 ya es pasado
         employeeId: user.id,
       }, repos),
       { message: 'appointment_overlap', status: 409 }
