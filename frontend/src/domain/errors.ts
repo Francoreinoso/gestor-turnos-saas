@@ -9,7 +9,7 @@ const MESSAGES: Record<string, string> = {
   unauthorized: 'Enlace inválido.',
   too_many_requests: 'Hiciste demasiados intentos. Espera unos minutos y vuelve a probar.',
   invalid_status_transition: 'Este turno ya no se puede modificar.',
-  not_found: 'No encontramos lo que buscás.',
+  not_found: 'No encontramos lo que buscas.',
   missing_fields: 'Faltan datos para completar la solicitud.',
   client_required: 'Faltan tus datos de contacto.',
   service_not_found: 'Ese servicio ya no está disponible.',
