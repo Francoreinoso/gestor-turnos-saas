@@ -7,3 +7,4 @@ export { userRepo as users } from './users.js';
 export { tokenRepo as tokens } from './tokens.js';
 export { staffInvitationTokenRepo as invitationTokens } from './staffInvitationTokens.js';
 export { emailService as email } from '../../integrations/email.js';
+export { availabilityRepo as availability } from './availability.js';

@@ -28,9 +28,14 @@ export const userRepo = {
     });
   },
 
-  // Returns users with their availability for a given account, optionally filtered by id
+  // spec 004 RNF concurrencia: serializa los reemplazos de horario del mismo trabajador. Solo dentro de una transacción.
+  lockById: (tx, id) =>
+    tx.select({ id: users.id }).from(users).where(eq(users.id, id)).for('update').then(r => r[0]),
+
+  // Returns users with their availability for a given account, optionally filtered by id.
+  // spec 004 RF-17: solo trabajadores (staff) activos — el owner no atiende, pendiente/inactivo no se ofrecen.
   findWithAvailability: (db, accountId, userId = null) => {
-    const conditions = [eq(users.account_id, accountId)];
+    const conditions = [eq(users.account_id, accountId), eq(users.role, 'staff'), eq(users.status, 'activo')];
     if (userId) conditions.push(eq(users.id, userId));
     return db.query.users.findMany({
       where: and(...conditions),

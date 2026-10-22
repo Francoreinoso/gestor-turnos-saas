@@ -258,12 +258,12 @@ test('RF-17: date_from > date_to contra la DB real → resumen en 0 y listado va
     assert.deepEqual(listing, { payments: [], hasMore: false });
   }));
 
-// T20 — impacto fuera de la spec: no hay migración 0006 para esta spec.
+// T20 — impacto fuera de la spec: la spec 003 no agrega migraciones (las posteriores, p. ej. 0006 de la spec 004, son ajenas).
 test('no se agregó ninguna migración nueva para esta spec', async () => {
   const fs = await import('node:fs');
   const path = await import('node:path');
   const { fileURLToPath } = await import('node:url');
   const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../db/migrations');
   const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql'));
-  assert.ok(!files.some(f => f.startsWith('0006')), 'no debe existir una migración 0006');
+  assert.ok(!files.some(f => f.includes('spec_003')), 'la spec 003 no debe agregar migraciones');
 });

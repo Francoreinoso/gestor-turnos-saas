@@ -195,9 +195,13 @@ Diferencias funcionales `owner` vs `staff`:
 
 ### Recurso `availability`
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/availability/:business_id?employee_id=&service_id=&date_from=&date_to=` | Horarios libres calculados (no son filas reales — se derivan de `availability` + `services.duration_minutes` − `appointments` ocupados) |
+| Método | Ruta | Descripción | Quién |
+|---|---|---|---|
+| GET | `/availability/:business_id?employee_id=&service_id=&date_from=&date_to=` | Horarios libres calculados (no son filas reales — se derivan de `availability` + `services.duration_minutes` − `appointments` ocupados). Solo ofrece trabajadores (`staff`) `activo`s | público |
+| GET | `/staff/:id/availability` | Horario semanal del trabajador (ventanas `day_of_week`, `start_time`, `end_time` en `HH:MM`) | owner (cualquier trabajador) / staff (solo el propio) |
+| PUT | `/staff/:id/availability` | Reemplaza el horario completo en una transacción (`[]` lo vacía). Valida forma (400), valores y solapamiento (422); trabajador `inactivo` → 422 | owner / staff (solo el propio) |
+
+*Spec 004. Fuera de alcance o ajeno → 404 (incluido el id de un owner: no atiende turnos, no tiene horario). El no-solapamiento de ventanas lo garantiza un `EXCLUDE` en la base (migración 0006). Cambiar el horario no toca turnos ya agendados.*
 
 *Pendiente de decisión de producto: si `service_id` es obligatorio u opcional (afecta si se devuelven bloques ya cortados por duración, o un rango libre sin cortar).*
 

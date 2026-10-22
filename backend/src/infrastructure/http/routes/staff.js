@@ -8,6 +8,8 @@ import { editStaff } from '../../../application/editStaff.js';
 import { deactivateStaff } from '../../../application/deactivateStaff.js';
 import { listStaff } from '../../../application/listStaff.js';
 import { getStaff } from '../../../application/getStaff.js';
+import { getStaffAvailability } from '../../../application/getStaffAvailability.js';
+import { replaceStaffAvailability } from '../../../application/replaceStaffAvailability.js';
 
 const router = express.Router();
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
@@ -43,6 +45,27 @@ router.get('/:id', auth, wrap(async (req, res) => {
     id: req.params.id,
     accountId: req.user.account_id,
     actor: actorOf(req),
+  }, repos);
+  res.json(result);
+}));
+
+// spec 004 RF-1, RF-2, RF-13..RF-15 — horario semanal del trabajador.
+router.get('/:id/availability', auth, wrap(async (req, res) => {
+  const result = await getStaffAvailability(db, {
+    id: req.params.id,
+    accountId: req.user.account_id,
+    actor: actorOf(req),
+  }, repos);
+  res.json(result);
+}));
+
+// spec 004 RF-3..RF-12 — reemplazo total e idempotente del horario (PUT: el cuerpo es el estado final).
+router.put('/:id/availability', auth, wrap(async (req, res) => {
+  const result = await replaceStaffAvailability(db, {
+    id: req.params.id,
+    accountId: req.user.account_id,
+    actor: actorOf(req),
+    body: req.body,
   }, repos);
   res.json(result);
 }));

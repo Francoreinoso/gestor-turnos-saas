@@ -70,7 +70,11 @@ export const availability = pgTable('availability', {
   end_time: time('end_time').notNull(),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => ({
+  // spec 004 RF-6, RF-8 — el EXCLUDE de no-solapamiento (RF-9) vive solo en la migración 0006.
+  dayOfWeekRange: check('availability_day_of_week_range', sql`${table.day_of_week} BETWEEN 0 AND 6`),
+  startBeforeEnd: check('availability_start_before_end', sql`${table.start_time} < ${table.end_time}`),
+}));
 
 export const appointments = pgTable('appointments', {
   id: uuid('id').primaryKey().defaultRandom(),
