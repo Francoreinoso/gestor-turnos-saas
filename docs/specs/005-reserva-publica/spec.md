@@ -80,7 +80,7 @@ Esta spec define las dos pantallas públicas (reservar y gestionar un turno por 
 - RF-32: LAS rutas `/reservar/:accountId` y `/turno/:id` son accesibles con o sin sesión iniciada y no redirigen según el rol.
 - RF-33: EL SISTEMA traduce los códigos de error de la API a mensajes en español en un solo lugar; un código desconocido muestra un mensaje genérico, nunca el código crudo.
 - RF-34: LAS pantallas son usables desde 360 px de ancho sin scroll horizontal; los controles son operables por teclado y los campos tienen etiquetas asociadas.
-- RF-35: LAS fechas y horas se muestran en `es-AR` en la zona horaria del navegador.
+- RF-35: LAS fechas y horas se muestran en `es-CL` en la zona horaria del navegador.
 
 ## Requisitos no funcionales
 

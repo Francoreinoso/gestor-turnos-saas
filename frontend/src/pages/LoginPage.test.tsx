@@ -33,7 +33,7 @@ test('too_many_requests se muestra en español, no como código', async () => {
   renderPage();
   await submitLogin(userEvent.setup(), 'clave-incorrecta');
 
-  expect(await screen.findByText('Demasiados intentos. Esperá unos minutos e intentá de nuevo.')).toBeInTheDocument();
+  expect(await screen.findByText('Demasiados intentos. Espera unos minutos e intenta de nuevo.')).toBeInTheDocument();
   expect(screen.queryByText(/too_many_requests/)).not.toBeInTheDocument();
 });
 

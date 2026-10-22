@@ -15,10 +15,10 @@ export function validateClient({ name, email, phone }: ClientInput): ClientError
   const e = email.trim();
   const p = phone.trim();
 
-  if (!name.trim()) errors.name = 'Ingresá tu nombre.';
-  if (!e && !p) errors.contact = 'Ingresá un email o un teléfono para contactarte.';
-  if (e && !e.includes('@')) errors.email = 'Ingresá un email válido.';
-  if (p && !PHONE_REGEX.test(p)) errors.phone = 'Ingresá el teléfono en formato internacional, por ejemplo +5491155551234.';
+  if (!name.trim()) errors.name = 'Ingresa tu nombre.';
+  if (!e && !p) errors.contact = 'Ingresa un email o un teléfono para contactarte.';
+  if (e && !e.includes('@')) errors.email = 'Ingresa un email válido.';
+  if (p && !PHONE_REGEX.test(p)) errors.phone = 'Ingresa el teléfono en formato internacional, por ejemplo +56912345678.';
   return errors;
 }
 

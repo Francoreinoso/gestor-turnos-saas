@@ -19,7 +19,7 @@ export default function ManageLinkBox({ link }: { link: string }) {
   return (
     <div className="pub-link-box">
       <p className="pub-warning">
-        <strong>Guardá este enlace.</strong> Es la única forma de cancelar o reprogramar tu turno: no te lo enviamos por otro medio.
+        <strong>Guarda este enlace.</strong> Es la única forma de cancelar o reprogramar tu turno: no te lo enviamos por otro medio.
       </p>
       <label>
         Enlace para gestionar tu turno

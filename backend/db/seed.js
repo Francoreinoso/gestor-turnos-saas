@@ -158,7 +158,7 @@ const run = async () => {
       `select to_regclass('public.accounts') as accounts, to_regclass('drizzle.__drizzle_migrations') as migrations`,
     );
     if (!rows[0].accounts || !rows[0].migrations) {
-      throw new Error('La base no tiene las migraciones aplicadas: ejecutá npm run db:migrate primero');
+      throw new Error('La base no tiene las migraciones aplicadas: ejecuta npm run db:migrate primero');
     }
 
     const result = await seedDemo(db, { ifMissing: process.argv.includes('--if-missing') });

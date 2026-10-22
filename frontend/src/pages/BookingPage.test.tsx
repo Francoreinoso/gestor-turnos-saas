@@ -104,7 +104,7 @@ test('RF-11/RF-13/RF-14: muestra negocio y servicios con duración y precio; ava
 
   await user.click(corte);
 
-  expect(screen.getByRole('heading', { name: /elegí un profesional/i })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /elige un profesional/i })).toBeInTheDocument();
   expect(screen.getByRole('radio', { name: /cualquiera/i })).toBeChecked();
   expect(screen.getByRole('radio', { name: 'Ana' })).toBeInTheDocument();
   expect(screen.getByRole('radio', { name: 'Beto' })).toBeInTheDocument();
@@ -125,7 +125,7 @@ test('recorrido completo: llega al resumen y al enlace de gestión completo (RF-
   await fillDetails(user);
   await click(user, /continuar/i);
 
-  expect(screen.getByRole('heading', { name: /confirmá tu reserva/i })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /confirma tu reserva/i })).toBeInTheDocument();
   await click(user, /confirmar reserva/i);
 
   expect(await screen.findByRole('heading', { name: /turno reservado/i })).toBeInTheDocument();
@@ -203,13 +203,13 @@ test('RF-18: la validación bloquea el envío y marca los campos', async () => {
   await click(user, /continuar/i);
   expect(screen.getByRole('heading', { name: /tus datos/i })).toBeInTheDocument();
   expect(screen.getByLabelText(/nombre/i)).toBeInvalid();
-  expect(screen.getByText(/ingresá tu nombre/i)).toBeInTheDocument();
+  expect(screen.getByText(/ingresa tu nombre/i)).toBeInTheDocument();
   expect(screen.getByText(/email o un teléfono/i)).toBeInTheDocument();
 
   await user.type(screen.getByLabelText(/nombre/i), 'Lucía');
   await user.type(screen.getByLabelText(/teléfono/i), '1155551234');
   await click(user, /continuar/i);
-  expect(screen.getByText(/ingresá el teléfono en formato internacional/i)).toBeInTheDocument();
+  expect(screen.getByText(/ingresa el teléfono en formato internacional/i)).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: /tus datos/i })).toBeInTheDocument();
   expect(svc.book).not.toHaveBeenCalled();
 });
@@ -281,7 +281,7 @@ test('RF-21: un 409 al confirmar recarga los slots, vuelve al horario y conserva
 
   await click(user, /confirmar reserva/i);
 
-  expect(await screen.findByRole('heading', { name: /elegí día y horario/i })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: /elige día y horario/i })).toBeInTheDocument();
   expect(screen.getByRole('alert')).toHaveTextContent(/ya no está disponible/i);
   expect(svc.getSlots).toHaveBeenCalledTimes(2);
   expect(screen.getByRole('button', { name: '09:00' })).toHaveAttribute('aria-pressed', 'false');
@@ -296,7 +296,7 @@ test('RF-21: también vuelve al horario con no_professional_available', async ()
   const user = renderPage();
   await toConfirm(user);
   await click(user, /confirmar reserva/i);
-  expect(await screen.findByRole('heading', { name: /elegí día y horario/i })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: /elige día y horario/i })).toBeInTheDocument();
 });
 
 test.each([
@@ -311,7 +311,7 @@ test.each([
   await click(user, /confirmar reserva/i);
 
   expect(await screen.findByRole('alert')).toHaveTextContent(message);
-  expect(screen.getByRole('heading', { name: /confirmá tu reserva/i })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /confirma tu reserva/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /confirmar reserva/i })).toBeEnabled();
 
   await click(user, /confirmar reserva/i); // reintento

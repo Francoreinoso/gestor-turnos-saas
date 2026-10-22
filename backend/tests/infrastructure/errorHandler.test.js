@@ -14,7 +14,7 @@ test('error de aplicación 4xx con código snake_case pasa tal cual', () => {
 
 test('4xx cuyo mensaje no es un código → su mismo estado con bad_request', () => {
   assert.deepEqual(toResponse(appError(400, 'Unexpected token } in JSON')), { status: 400, body: { error: 'bad_request' } });
-  assert.deepEqual(toResponse(appError(403, 'No tenés permiso')), { status: 403, body: { error: 'bad_request' } });
+  assert.deepEqual(toResponse(appError(403, 'No tienes permiso')), { status: 403, body: { error: 'bad_request' } });
   assert.deepEqual(toResponse(appError(400, '')), { status: 400, body: { error: 'bad_request' } });
 });
 

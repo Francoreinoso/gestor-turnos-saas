@@ -51,7 +51,7 @@ endpoints nuevos. Dependencias nuevas: ninguna.
 
 ## 3. Frontend
 
-- **`pages/LoginPage.tsx`** — `ERROR_LABELS` suma `too_many_requests` ("Demasiados intentos. Esperá unos minutos e intentá de nuevo.") y `invalid_password` ("La contraseña debe tener entre 8 y 72 caracteres."); el `input` de contraseña del modo registro lleva `minLength={8}`. → RF-21
+- **`pages/LoginPage.tsx`** — `ERROR_LABELS` suma `too_many_requests` ("Demasiados intentos. Espera unos minutos e intenta de nuevo.") y `invalid_password` ("La contraseña debe tener entre 8 y 72 caracteres."); el `input` de contraseña del modo registro lleva `minLength={8}`. → RF-21
 - **`package.json`** — script `"typecheck": "tsc --noEmit"`. → RF-22
 
 ## 4. Documentación

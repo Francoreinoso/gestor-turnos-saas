@@ -40,7 +40,7 @@ frontend en `frontend/`. Sin migraciones de esquema.
   **Hecho cuando:** los cinco casos pasan.
 
 - [x] **T06 · Línea de comandos del seed** — RF-24, RF-25, RF-26
-  Arranque protegido en `db/seed.js` (no ejecuta al importarse), flag `--if-missing`, comprobación de base migrada con mensaje `ejecutá npm run db:migrate primero`, resumen impreso con `FRONTEND_URL` (credenciales, `bookingPath` y `managePath`) y código de salida distinto de cero ante error; script `"db:seed"` en `package.json`.
+  Arranque protegido en `db/seed.js` (no ejecuta al importarse), flag `--if-missing`, comprobación de base migrada con mensaje `ejecuta npm run db:migrate primero`, resumen impreso con `FRONTEND_URL` (credenciales, `bookingPath` y `managePath`) y código de salida distinto de cero ante error; script `"db:seed"` en `package.json`.
   **Hecho cuando:** sobre una base migrada, `npm run db:seed` imprime el resumen y termina en 0; sobre una base vacía imprime el mensaje de migrar y termina en distinto de 0; con `NODE_ENV=production` se niega y termina en distinto de 0; una segunda corrida con `--if-missing` termina en 0 sin cambios.
 
 ## Fase 3 — Docker

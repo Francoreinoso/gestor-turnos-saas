@@ -8,15 +8,15 @@ import { parseToken, roleHome } from '../utils/token';
 type Mode = 'login' | 'register';
 
 const ERROR_LABELS: Record<string, string> = {
-  missing_fields:      'Completá todos los campos.',
+  missing_fields:      'Completa todos los campos.',
   email_taken:         'Ese email ya está registrado.',
   invalid_credentials: 'Email o contraseña incorrectos.',
-  too_many_requests:   'Demasiados intentos. Esperá unos minutos e intentá de nuevo.',
+  too_many_requests:   'Demasiados intentos. Espera unos minutos e intenta de nuevo.',
   invalid_password:    'La contraseña debe tener entre 8 y 72 caracteres.',
 };
 
 // spec 008 RF-21: nunca se muestra un código crudo de la API (internal_error, payload_too_large, …).
-const GENERIC_ERROR = 'Ocurrió un error. Intentá de nuevo en unos minutos.';
+const GENERIC_ERROR = 'Ocurrió un error. Intenta de nuevo en unos minutos.';
 
 export default function LoginPage() {
   const [mode, setMode]       = useState<Mode>('login');
@@ -95,7 +95,7 @@ export default function LoginPage() {
         </form>
 
         <p className="auth-switch">
-          {mode === 'login' ? '¿Negocio nuevo? ' : '¿Ya tenés cuenta? '}
+          {mode === 'login' ? '¿Negocio nuevo? ' : '¿Ya tienes cuenta? '}
           <button type="button" onClick={toggleMode}>
             {mode === 'login' ? 'Registrarse' : 'Iniciar sesión'}
           </button>

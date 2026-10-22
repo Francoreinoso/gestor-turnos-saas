@@ -139,7 +139,7 @@ Backend: `npm test` y `npm run db:migrate` en verde. Frontend: `npm test`, `npm 
 | RF-31 | `apiPublic` |
 | RF-32 | `App.tsx` |
 | RF-33 | `domain/errors.ts` |
-| RF-34, RF-35 | `index.css` (`pub-*`), `index.html`, formateo `es-AR` |
+| RF-34, RF-35 | `index.css` (`pub-*`), `index.html`, formateo `es-CL` |
 
 ## 6. Verificación
 

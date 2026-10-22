@@ -174,7 +174,7 @@ export default function ManagePage() {
 
       {canAct && mode === 'confirm_cancel' && (
         <section>
-          <p>¿Seguro que querés cancelar tu turno? Esta acción no se puede deshacer.</p>
+          <p>¿Seguro que quieres cancelar tu turno? Esta acción no se puede deshacer.</p>
           <div className="pub-actions">
             <button type="button" className="pub-secondary" onClick={() => setMode('view')} disabled={busy}>No, volver</button>
             <button type="button" className="pub-danger" onClick={confirmCancel} disabled={busy}>Sí, cancelar turno</button>
@@ -184,7 +184,7 @@ export default function ManagePage() {
 
       {canAct && mode === 'pick_slot' && (
         <section>
-          <h2>Elegí un nuevo horario</h2>
+          <h2>Elige un nuevo horario</h2>
           {slots === null
             ? <p className="pub-note" role="status">Cargando horarios…</p>
             : <SlotPicker days={groupByDay(slots, DEFAULT_DAYS, rangeFrom)} selected={chosen?.starts_at} onSelect={setChosen} />}

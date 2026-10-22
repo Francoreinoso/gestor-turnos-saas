@@ -82,7 +82,7 @@ Esta spec corrige todo lo anterior sin cambiar el contrato funcional de la API: 
 
 ### Pantalla de acceso y verificación continua
 
-- RF-21: CUANDO la API responde `too_many_requests` o `invalid_password`, EL SISTEMA muestra en la pantalla de acceso un mensaje en español específico ("Demasiados intentos. Esperá unos minutos e intentá de nuevo." / "La contraseña debe tener entre 8 y 72 caracteres.") y no el código crudo; el campo de contraseña del registro declara `minLength=8`.
+- RF-21: CUANDO la API responde `too_many_requests` o `invalid_password`, EL SISTEMA muestra en la pantalla de acceso un mensaje en español específico ("Demasiados intentos. Espera unos minutos e intenta de nuevo." / "La contraseña debe tener entre 8 y 72 caracteres.") y no el código crudo; el campo de contraseña del registro declara `minLength=8`.
 - RF-22: EL SISTEMA agrega a la CI una verificación de tipos del frontend (`tsc --noEmit`) y comprueba, en la prueba de humo, las cabeceras de RF-17 con una solicitud real al frontend.
 - RF-23: EL README refleja el estado de seguridad real: qué protege el sistema ahora (límites, errores genéricos, cabeceras, validación de configuración) y qué queda fuera (RF de "Fuera de alcance").
 

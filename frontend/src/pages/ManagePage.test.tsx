@@ -71,7 +71,7 @@ test('RF-24: token vencido → plazo vencido y comunicarse con el negocio, sin a
   svc.getAppointment.mockRejectedValue(new ApiError(401, 'token_expired'));
   renderPage();
   expect(await screen.findByText(/plazo para modificar/i)).toBeInTheDocument();
-  expect(screen.getByText(/comunicate con el negocio/i)).toBeInTheDocument();
+  expect(screen.getByText(/comunícate con el negocio/i)).toBeInTheDocument();
   expect(screen.queryByRole('button')).not.toBeInTheDocument();
 });
 
@@ -115,7 +115,7 @@ test('RF-26: cancelar exige confirmación explícita antes de llamar a la API', 
 
   await user.click(btn('Cancelar turno'));
   expect(svc.cancel).not.toHaveBeenCalled();
-  expect(screen.getByText(/seguro que querés cancelar/i)).toBeInTheDocument();
+  expect(screen.getByText(/seguro que quieres cancelar/i)).toBeInTheDocument();
 
   await user.click(btn(/no, volver/i));
   expect(svc.cancel).not.toHaveBeenCalled();

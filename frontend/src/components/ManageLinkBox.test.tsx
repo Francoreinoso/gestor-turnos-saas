@@ -9,7 +9,7 @@ test('RF-20: muestra el enlace completo y el aviso de guardarlo', () => {
   render(<ManageLinkBox link={LINK} />);
   expect(screen.getByDisplayValue(LINK)).toBeInTheDocument();
   expect(screen.getByText(/única forma de cancelar o reprogramar/i)).toBeInTheDocument();
-  expect(screen.getByText(/guardá este enlace/i)).toBeInTheDocument();
+  expect(screen.getByText(/guarda este enlace/i)).toBeInTheDocument();
 });
 
 test('RF-20: "Copiar" usa navigator.clipboard', async () => {

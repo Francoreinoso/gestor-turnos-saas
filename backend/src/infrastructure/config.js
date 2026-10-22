@@ -38,7 +38,7 @@ export const loadConfig = (env) => {
       throw new ConfigError(`JWT_SECRET debe tener al menos ${MIN_PRODUCTION_SECRET_LENGTH} caracteres en producción`);
     }
     if (EXAMPLE_SECRETS.includes(jwtSecret)) {
-      throw new ConfigError('JWT_SECRET es el valor de ejemplo del repositorio: generá uno propio para producción');
+      throw new ConfigError('JWT_SECRET es el valor de ejemplo del repositorio: genera uno propio para producción');
     }
   }
 

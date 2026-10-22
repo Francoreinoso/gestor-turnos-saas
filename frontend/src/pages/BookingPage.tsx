@@ -65,7 +65,7 @@ export default function BookingPage() {
   }, [accountId]);
 
   if (load.status === 'loading') return <main className="pub-page"><p className="pub-note" role="status">Cargando…</p></main>;
-  if (load.status === 'not_found') return <main className="pub-page"><h1>Negocio no encontrado</h1><p className="pub-note">Revisá el enlace que te compartieron.</p></main>;
+  if (load.status === 'not_found') return <main className="pub-page"><h1>Negocio no encontrado</h1><p className="pub-note">Revisa el enlace que te compartieron.</p></main>;
   if (load.status === 'error') return <main className="pub-page"><p className="pub-error" role="alert">{load.message}</p></main>;
 
   const { account } = load;
@@ -183,7 +183,7 @@ export default function BookingPage() {
 
       {step === 'service' && (
         <section>
-          <h2>Elegí un servicio</h2>
+          <h2>Elige un servicio</h2>
           <ul className="pub-list">
             {account.services.map(s => (
               <li key={s.id}>
@@ -199,7 +199,7 @@ export default function BookingPage() {
 
       {step === 'professional' && (
         <section>
-          <h2>Elegí un profesional</h2>
+          <h2>Elige un profesional</h2>
           <fieldset className="pub-radios">
             <legend className="pub-visually-hidden">Profesional</legend>
             <label>
@@ -222,7 +222,7 @@ export default function BookingPage() {
 
       {step === 'slot' && (
         <section>
-          <h2>Elegí día y horario</h2>
+          <h2>Elige día y horario</h2>
           {visibleSlots === null
             ? <p className="pub-note" role="status">Cargando horarios…</p>
             : <SlotPicker days={groupByDay(visibleSlots, DEFAULT_DAYS, rangeFrom)} selected={slot?.starts_at} onSelect={pickSlot} />}
@@ -270,7 +270,7 @@ export default function BookingPage() {
 
       {step === 'confirm' && service && slot && (
         <section>
-          <h2>Confirmá tu reserva</h2>
+          <h2>Confirma tu reserva</h2>
           <dl className="pub-summary">
             <dt>Servicio</dt><dd>{service.name} ({service.duration_minutes} min · {formatPrice(service.price)})</dd>
             <dt>Profesional</dt><dd>{professional ? professional.name : 'Cualquiera (te asignamos uno)'}</dd>

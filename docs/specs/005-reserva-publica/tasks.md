@@ -112,7 +112,7 @@ Todos en `tests/integration/publicApi.test.js`. Helper para montar `routes/publi
 ## Fase 9 — Frontend: componentes y páginas (test primero, `publicService` simulado)
 
 - [x] **T21 · `SlotPicker`** — RF-15, RF-17
-  Test que falla: renderiza días, deshabilita los vacíos, muestra los horarios del día elegido en `es-AR`, informa cuando no hay ninguno; emite el slot elegido. Luego el componente.
+  Test que falla: renderiza días, deshabilita los vacíos, muestra los horarios del día elegido en `es-CL`, informa cuando no hay ninguno; emite el slot elegido. Luego el componente.
   **Hecho cuando:** el test pasa operando solo con teclado (`user.tab`/`keyboard`).
 
 - [x] **T22 · `ManageLinkBox`** — RF-20, RF-28
