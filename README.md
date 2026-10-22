@@ -81,6 +81,8 @@ Las variables de `.env` (todas con valores de desarrollo que funcionan tal cual)
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos; `docker-compose.yml` arma `DATABASE_URL` a partir de ellas |
 | `JWT_SECRET` | Firma de los JWT. **Cambiarla** fuera de desarrollo |
 | `APP_URL` | URL pública del frontend (por defecto `http://localhost:5173`): base de los enlaces de activación de trabajadores. En producción debe ser `https://` |
+| `ANTHROPIC_API_KEY` | Clave de la API de Anthropic para el asistente de IA (spec 011). Opcional: vacía, el asistente queda deshabilitado. Es un secreto: solo en tu `.env` local o en el gestor de secretos del despliegue, nunca en el repositorio |
+| `ASSISTANT_MODEL` | Modelo del asistente (por defecto `claude-sonnet-5-5`) |
 | `SEED_DEMO` | `true` siembra la cuenta demo si todavía no existe; `false` solo migra |
 | `TZ` | Zona horaria de los contenedores (por defecto `America/Santiago`) |
 | `DB_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | Puertos publicados, por si 5432, 3000 o 5173 están ocupados |
