@@ -1,6 +1,6 @@
 # Constitución — SaaS Gestor de Turnos
 
-1. **Stack fijo.** Node + Express 5 + TypeScript, Drizzle ORM, PostgreSQL, JWT. Cambiar el stack o sumar una dependencia exige justificación escrita en la spec.
+1. **Stack fijo.** Backend: Node + Express 5 en JavaScript con módulos ES. Frontend: React + Vite + React Router en TypeScript, con Vitest y Testing Library como herramientas de prueba. Drizzle ORM, PostgreSQL, JWT. Cambiar el stack o sumar una dependencia exige justificación escrita en la spec.
 2. **Invariantes en la base.** Toda regla que deba cumplirse siempre vive en la DB (CHECK, trigger, índice único), no en la aplicación.
 3. **Capas puras.** `domain/` sin I/O ni imports de infraestructura; `application/` orquesta casos de uso; `infrastructure/` es reemplazable.
 4. **Atomicidad.** Cada operación multi-tabla (precio + historial, reprogramar, pago + comisión) ocurre en una sola transacción o no ocurre.
@@ -14,3 +14,4 @@
 12. **Trazabilidad.** Commits en español que explican el porqué; una rama por spec.
 
 _Enmiendas: se editan en un commit dedicado que explique el cambio._
+_Enmienda 2026-10-22: el principio 1 pasa a describir el stack real (backend en JavaScript con módulos ES, frontend en TypeScript, Vitest y Testing Library); antes decía TypeScript para todo._
