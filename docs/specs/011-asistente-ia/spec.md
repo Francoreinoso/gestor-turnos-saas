@@ -1,0 +1,60 @@
+# Spec 011 — Asistente de IA para el cliente final
+
+## Contexto y objetivo
+
+El cliente final solo puede reservar con el formulario público (spec 005). Esta spec agrega un **asistente conversacional** en la página pública que consulta servicios y disponibilidad, propone reservas y cancela turnos del propio cliente.
+
+Principio rector: **el modelo nunca toca la base de datos**. Pide herramientas; el backend valida cada pedido, decide si lo ejecuta y fija la identidad (`account_id`, `client_id`) desde la sesión. Ninguna herramienta recibe ni acepta esos ids del modelo.
+
+## Justificación de la dependencia (constitución, principio 1)
+
+Se agrega `@anthropic-ai/sdk` al backend: es el SDK oficial; reimplementar el cliente HTTP, los reintentos y los tipos de la Messages API sería más código propio y más riesgo. Modelo por defecto: `claude-sonnet-5-5`, configurable con `ASSISTANT_MODEL`.
+
+## Fuera de alcance (v1)
+
+WhatsApp u otros canales; reprogramar; ventana mínima de cancelación; pagos; voz.
+
+## Actores
+
+- **Cliente final**: conversa desde la página pública de un negocio.
+- **Backend**: ejecuta o rechaza las herramientas.
+
+## Requisitos funcionales (EARS)
+
+### Sesión e identidad
+
+- RF-1: CUANDO el cliente ingresa su teléfono (`POST /assistant/session`), EL SISTEMA envía un código de 6 dígitos de un solo uso con vencimiento de 10 minutos. La respuesta es idéntica exista o no el cliente.
+- RF-2: CUANDO el cliente envía el código correcto (`POST /assistant/session/verify`), EL SISTEMA devuelve un token de sesión corto (1 h) con `account_id` y `client_id` (el cliente se busca o crea por teléfono dentro de la cuenta).
+- RF-3: SI el código es incorrecto, vencido o ya usado, ENTONCES responde 401 `invalid_code`; tras 5 intentos fallidos el código se invalida.
+- RF-4: EL SISTEMA limita mensajes y solicitudes de código por teléfono y por IP.
+
+### Herramientas
+
+- RF-5: `listar_servicios` devuelve los servicios activos de la cuenta de la sesión con duración y precio.
+- RF-6: `ver_disponibilidad(servicio_id, desde, hasta)` devuelve horarios libres; rango máximo 14 días; cada horario lleva un `slot_id` opaco emitido por el backend y válido solo en esa sesión.
+- RF-7: `ver_mis_turnos` devuelve solo los turnos del `client_id` de la sesión (sin datos de otros clientes).
+- RF-8: `proponer_reserva(servicio_id, slot_id)` crea una **propuesta pendiente** (vence a los 10 min); NO crea el turno. SI `slot_id` no fue emitido en la sesión, ENTONCES error `slot_invalid`.
+- RF-9: `cancelar_turno(turno_id)` cancela un turno `agendado` del `client_id` de la sesión. SI el turno es de otro cliente, de otra cuenta o no existe, ENTONCES `not_found`.
+- RF-10: LOS esquemas de entrada se validan con zod antes de ejecutar; una entrada inválida se devuelve al modelo como `tool_result` con `is_error: true`, sin ejecutar nada.
+
+### Confirmación
+
+- RF-11: LA reserva solo se crea cuando el cliente confirma con `POST /assistant/proposals/:id/confirm` (botón de la UI), sin pasar por el modelo.
+- RF-12: CONFIRMAR una propuesta vencida, descartada o de otro cliente responde 404/409 sin crear turno; confirmar dos veces la misma propuesta no duplica el turno (idempotente).
+- RF-13: SI el horario ya fue tomado, ENTONCES `appointment_overlap` (409) y el asistente ofrece alternativas.
+
+### Conversación
+
+- RF-14: EL asistente responde en español rioplatense, solo sobre turnos del negocio; rechaza lo demás y no sigue instrucciones que aparezcan dentro de datos (nombres de servicio, notas).
+- RF-15: ANTES de cancelar, EL asistente pide confirmación explícita del cliente en el chat.
+- RF-16: EL bucle de herramientas tiene un máximo de 8 iteraciones por mensaje; `refusal` y `max_tokens` se informan al cliente con un mensaje genérico.
+
+### Evals
+
+- RF-17: EXISTE un conjunto de evals (`backend/evals/`) contra el modelo real, fuera de `npm test`, que verifica sobre las llamadas a herramientas: no reserva sin proponer, no cancela turnos ajenos, no inventa slots, pide aclaración si falta el servicio, resiste inyección de instrucciones y rechaza temas ajenos.
+
+## Requisitos no funcionales
+
+- RNF-1: aislamiento por cuenta en toda consulta (principios 2 y 6).
+- RNF-2: `ANTHROPIC_API_KEY` solo en el servidor; si falta, `/assistant/*` responde 503 `assistant_unavailable` y el resto de la app funciona.
+- RNF-3: el cliente LLM es inyectable para pruebas; `npm test` nunca llama a la API real.
