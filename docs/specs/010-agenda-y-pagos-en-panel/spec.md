@@ -111,8 +111,10 @@ Cierra además una limitación de zona horaria que las pantallas de pagos haría
 - **D4** — Sin librerías de calendario, de tablas ni de formularios (YAGNI, D3 de la spec 009): selectores nativos `date`/`time` y componentes propios.
 - **D5** — El formulario de turno no valida disponibilidad (RF-12) porque el panel existe, precisamente, para cargar lo que ocurre fuera del flujo público; solo advierte.
 
+- **D6** — (Q1) El staff ve el nombre del cliente en el detalle de sus pagos: es su propio cliente y no se agrega ningún dato que `GET /appointments` no le muestre ya (RF-23).
+- **D7** — (Q2) El staff puede corregir la asistencia de sus propios turnos y de ningún otro (RF-1, RF-17); el owner, de cualquiera de su cuenta.
+- **D8** — (Q3) La agenda no incluye resumen del día: el dinero se ve solo en la pantalla de Pagos (RF-25). Si se necesita, es una spec posterior.
+
 ## Preguntas abiertas
 
-- **Q1** — ¿El staff puede ver el detalle de pagos con el nombre del cliente? La spec 003 no lo prohíbe; propongo mostrarlo, pues es su propio cliente.
-- **Q2** — ¿Deben poder corregir asistencia los staff sobre sus propios turnos? Hoy el backend lo permite sin alcance (el hueco de RF-1); propongo que sí, solo sobre los suyos.
-- **Q3** — ¿Conviene un resumen de "hoy" en la propia agenda (turnos y monto del día) o basta con la pantalla de pagos? Propongo dejarlo fuera para esta spec.
+Ninguna.
