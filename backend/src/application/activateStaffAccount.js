@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
+import { toPublicUser } from '../domain/publicUser.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
@@ -17,6 +18,6 @@ export const activateStaffAccount = async (db, { token, password }, repos) => {
       status: 'activo',
     }); // RF-11
     await repos.invitationTokens.markUsed(tx, record.id);
-    return { user };
+    return { user: toPublicUser(user) };
   });
 };

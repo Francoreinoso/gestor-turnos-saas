@@ -1,4 +1,5 @@
 import { assertTransition } from '../domain/userStatus.js';
+import { toPublicUser } from '../domain/publicUser.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
@@ -13,6 +14,6 @@ export const deactivateStaff = async (db, { id, accountId, actor, now = new Date
   return db.transaction(async (tx) => {
     const updated = await repos.users.update(tx, id, { status: 'inactivo' }); // RF-25
     await repos.appointments.cancelFutureForUser(tx, { userId: id, now }); // RF-26, RF-27
-    return { user: updated };
+    return { user: toPublicUser(updated) };
   });
 };

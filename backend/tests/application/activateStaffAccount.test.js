@@ -36,8 +36,9 @@ test('token válido → guarda password_hash, activa y marca el token usado', as
   const { user } = await activateStaffAccount(db, { token: 'abc', password: 'nueva123' }, repos);
 
   assert.equal(user.status, 'activo'); // RF-11
-  assert.ok(user.password_hash);
-  assert.notEqual(user.password_hash, 'nueva123');
+  assert.equal(user.password_hash, undefined); // spec 009 RF-1: el hash nunca sale
+  assert.ok(calls[0][2].password_hash); // pero sí se guarda
+  assert.notEqual(calls[0][2].password_hash, 'nueva123');
   assert.equal(calls[0][0], 'update');
   assert.equal(calls[1][0], 'markUsed');
   assert.equal(calls[1][1], 'tok-1');

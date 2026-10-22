@@ -1,4 +1,5 @@
 import { generateAccessToken } from '../domain/token.js';
+import { toPublicUser } from '../domain/publicUser.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 const TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
@@ -20,6 +21,6 @@ export const resendStaffInvitation = async (db, { id, accountId, actor }, repos)
       expires_at: new Date(Date.now() + TOKEN_TTL_MS),
     });
     await repos.email.sendInvitation({ to: user.email, link: token }); // RF-15 aplica igual
-    return { user };
+    return { user: toPublicUser(user) };
   });
 };

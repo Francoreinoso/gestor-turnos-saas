@@ -24,9 +24,11 @@ test('cambia el propio nombre', async () => {
 });
 
 test('cambia la contraseña: guarda un hash, no el texto plano', async () => {
-  const repos = makeRepos();
+  let saved;
+  const repos = makeRepos({ users: { update: async (db, id, data) => { saved = data; return { id, ...data }; } } });
   const { user } = await editOwnProfile(db, { actor, body: { password: 'plano123' } }, repos);
-  assert.ok(user.password_hash);
-  assert.notEqual(user.password_hash, 'plano123');
+  assert.ok(saved.password_hash);
+  assert.notEqual(saved.password_hash, 'plano123');
+  assert.equal(user.password_hash, undefined); // spec 009 RF-1: el hash nunca sale
   assert.equal(user.password, undefined);
 });

@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { parseInput } from '../domain/validation.js';
 import { editSelfBody } from '../domain/schemas/staff.js';
+import { toPublicUser } from '../domain/publicUser.js';
 
 // spec 002 — cualquier usuario autenticado edita su propio nombre y contraseña: RF-20, RF-21.
 export const editOwnProfile = async (db, { actor, body }, repos) => {
@@ -11,5 +12,5 @@ export const editOwnProfile = async (db, { actor, body }, repos) => {
     delete changes.password;
   }
 
-  return { user: await repos.users.update(db, actor.id, changes) }; // RF-20
+  return { user: toPublicUser(await repos.users.update(db, actor.id, changes)) }; // RF-20
 };

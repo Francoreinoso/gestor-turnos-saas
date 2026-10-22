@@ -3,6 +3,7 @@ import { generateAccessToken } from '../domain/token.js';
 import { parseInput } from '../domain/validation.js';
 import { inviteStaffBody } from '../domain/schemas/staff.js';
 import { decideInviteAction } from '../domain/staffInvite.js';
+import { toPublicUser } from '../domain/publicUser.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 const TOKEN_TTL_MS = 72 * 60 * 60 * 1000; // RF-9
@@ -52,6 +53,6 @@ export const inviteStaff = async (db, { accountId, actor, body }, repos) => {
     // RF-15: el envío ocurre dentro de la transacción — si falla, el rollback deja todo intacto.
     await repos.email.sendInvitation({ to: user.email, link: token });
 
-    return { user, action };
+    return { user: toPublicUser(user), action };
   });
 };

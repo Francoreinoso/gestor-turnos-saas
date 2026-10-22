@@ -2,6 +2,7 @@ import { normalizeEmail } from '../domain/client.js';
 import { generateAccessToken } from '../domain/token.js';
 import { parseInput } from '../domain/validation.js';
 import { editStaffBody } from '../domain/schemas/staff.js';
+import { toPublicUser } from '../domain/publicUser.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 const TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
@@ -29,7 +30,7 @@ export const editStaff = async (db, { id, accountId, actor, body }, repos) => {
 
   // RF-18: solo un trabajador pendiente reemite invitación al cambiar el email.
   if (!(emailChanged && user.status === 'pendiente')) {
-    return { user: await repos.users.update(db, id, changes) }; // RF-16, RF-19
+    return { user: toPublicUser(await repos.users.update(db, id, changes)) }; // RF-16, RF-19
   }
 
   return db.transaction(async (tx) => {
@@ -42,6 +43,6 @@ export const editStaff = async (db, { id, accountId, actor, body }, repos) => {
       expires_at: new Date(Date.now() + TOKEN_TTL_MS),
     });
     await repos.email.sendInvitation({ to: updated.email, link: token });
-    return { user: updated };
+    return { user: toPublicUser(updated) };
   });
 };
