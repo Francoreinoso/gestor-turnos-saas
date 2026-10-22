@@ -9,13 +9,15 @@ const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 // spec 001 (comportamiento ya existente) + spec 003 RF-19/RF-20 (ventana de
 // corrección nueva). Extraído de routes/appointments.js:119-141 para poder
 // testearlo como caso de uso (plan.md D-P4).
-export const correctAppointment = async (db, { id, accountId, now }, repos) => {
+export const correctAppointment = async (db, { id, accountId, actor, now }, repos) => {
   const appointment = await repos.appointments.findOne(db, [
     eq(appointments.id, id),
     eq(appointments.account_id, accountId),
   ]);
 
   if (!appointment) throw httpErr(404, 'not_found');
+  // spec 010 RF-1 — mismo alcance que getAppointment, antes de la transición (sin 422 para ajenos)
+  if (actor.role === 'staff' && appointment.assigned_user_id !== actor.id) throw httpErr(404, 'not_found');
 
   const next = appointment.status === 'completado' ? 'no_llego' : 'completado';
   assertTransition(appointment.status, next);

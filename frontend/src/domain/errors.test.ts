@@ -39,6 +39,9 @@ const MANAGEMENT_CODES = [
   'invalid_time_format', 'invalid_day_of_week', 'start_must_be_before_end', 'overlapping_windows',
   'invalid_status_transition', 'invalid_password', 'forbidden', 'not_found', 'network_error', 'too_many_requests',
   'invalid_commission_rate', 'invalid_availability', 'user_inactive', 'unauthorized',
+  // spec 010
+  'appointment_overlap', 'no_professional_available', 'service_not_found', 'professional_not_found', 'client_not_found',
+  'correction_window_expired', 'invalid_date', 'invalid_period', 'ambiguous_period_filter', 'empty_update',
 ];
 
 // Formas de voseo (tenés, elegí, esperá…): la interfaz usa tuteo (commit dc46a49).
@@ -65,4 +68,9 @@ test('RF-8: desconocido, vacío o ausente → mensaje genérico', () => {
 
 test('RF-10: email_taken dice "ese email ya está en uso"', () => {
   expect(managementErrorMessage('email_taken')).toMatch(/ese email ya está en uso/i);
+});
+
+test('spec 010 RF-10, RF-17: los conflictos de agenda y la ventana de corrección se explican', () => {
+  expect(managementErrorMessage('appointment_overlap')).toMatch(/horario/i);
+  expect(managementErrorMessage('correction_window_expired')).toMatch(/plazo/i);
 });

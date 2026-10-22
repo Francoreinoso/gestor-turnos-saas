@@ -13,7 +13,8 @@ El problema técnico central es que **dos reservas no pueden pisarse nunca**, ni
 Con pantalla:
 
 - **Reserva pública sin login**: el cliente elige servicio, profesional (o "Cualquiera"), día y horario, y recibe un enlace de gestión para ver, cancelar o reprogramar su turno.
-- **Agenda del día**, solo lectura: el dueño ve todos los turnos del negocio y cada profesional los propios.
+- **Agenda del día** (`/owner/agenda`, `/staff/agenda`): el dueño ve todos los turnos del negocio (y filtra por profesional) y cada profesional los propios. Desde ahí se **crea** un turno (cliente existente o nuevo), se edita o cancela uno agendado, se **bloquea** un horario y se marca "No llegó" o "Completado" mientras la corrección sea posible.
+- **Pagos** (`/owner/pagos`, `/staff/pagos`), solo lectura: resumen por período (hoy, esta semana, este mes o un rango) con el desglose por profesional para el dueño, y el detalle de cada pago. El período se calcula con el día local del navegador.
 - **Servicios** (`/owner/servicios`): alta, edición, cambio de precio con su historial y baja lógica.
 - **Equipo** (`/owner/equipo`): el dueño invita a un trabajador, copia el **enlace de activación** (`/activar?token=…`, vence en 72 horas, todavía no se envía por email), lo reenvía, edita y da de baja.
 - **Horario semanal** por profesional (`/owner/equipo/<id>/horario`, y `/staff/horario` para el propio trabajador, que además edita ahí su nombre y contraseña), del que se derivan los horarios libres.
@@ -21,8 +22,7 @@ Con pantalla:
 
 Solo por API (todavía sin pantalla; ver [Operar por API lo que aún no tiene pantalla](#operar-por-api-lo-que-aún-no-tiene-pantalla)):
 
-- **Turnos desde el panel**: alta, edición, cancelación, bloqueos y corrección de asistencia.
-- **Pagos y comisiones**: cada turno completado genera un pago con la comisión del profesional; resumen financiero por período.
+- **Comisiones**: la comisión por defecto de la cuenta y la de cada trabajador (cada turno completado genera un pago con la comisión que corresponda). Los pagos sin comisión definida se ven en pantalla como «Sin comisión definida».
 
 ## Stack
 
@@ -132,12 +132,12 @@ El enlace de gestión de un turno agendado (con su token) lo imprime el seed al 
 |---|---|---|---|---|
 | Ver turnos | Todos los del negocio | Solo los propios | Solo el suyo, con su enlace | Pantalla |
 | Reservar, cancelar o reprogramar | — | — | Sí, con el enlace de gestión | Pantalla |
-| Crear turnos desde el panel | Sí, para cualquier profesional | Sí, para sí mismo | — | Solo API |
-| Bloquear horarios | Propios, de cualquiera o del negocio entero | Solo los propios | — | Solo API |
+| Crear turnos desde el panel | Sí, para cualquier profesional | Sí, para sí mismo | — | Pantalla |
+| Bloquear horarios | Propios, de cualquiera o del negocio entero | Solo los propios | — | Pantalla |
 | Editar servicios y precios | Sí | No | — | Pantalla |
 | Gestionar trabajadores | Sí | No | — | Pantalla |
 | Editar el horario semanal | De cualquier trabajador | Solo el propio | — | Pantalla |
-| Resumen financiero y pagos | Todos | Los propios | — | Solo API |
+| Resumen financiero y pagos | Todos | Los propios | — | Pantalla |
 
 Un recurso fuera de alcance responde 404 y no 403, para no confirmar que existe (detalle en el [diseño §3.10](docs/diseno-gestor-turnos.md)).
 
@@ -160,7 +160,7 @@ La especificación completa está en el [documento de diseño §4](docs/diseno-g
 
 ### Operar por API lo que aún no tiene pantalla
 
-Servicios, equipo y horarios se gestionan desde el panel (ver arriba). Lo que todavía no tiene pantalla —crear o bloquear turnos desde el panel y los pagos— se opera con la API. Estos comandos funcionan contra la demo (con Docker la API queda en `http://localhost:3000`, solo accesible desde tu máquina) y usan [`jq`](https://jqlang.org) para leer el token; sin `jq`, copia el valor de `"token"` de la respuesta.
+Servicios, equipo, horarios, turnos y pagos se operan desde el panel (ver arriba). Lo que todavía no tiene pantalla —las comisiones— se opera con la API. Estos comandos funcionan contra la demo (con Docker la API queda en `http://localhost:3000`, solo accesible desde tu máquina) y usan [`jq`](https://jqlang.org) para leer el token; sin `jq`, copia el valor de `"token"` de la respuesta.
 
 ```bash
 API=http://localhost:3000
@@ -171,8 +171,8 @@ TOKEN=$(curl -s $API/auth/login -H "$JSON" \
   -d '{"email":"demo.owner@example.com","password":"demo1234"}' | jq -r .token)
 AUTH="Authorization: Bearer $TOKEN"
 
-# 2. Resumen financiero del mes
-curl -s "$API/payments/summary?period=este_mes" -H "$AUTH"
+# 2. Comisión por defecto de la cuenta (25 %)
+curl -s -X PATCH $API/accounts/commission -H "$JSON" -H "$AUTH" -d '{"commission_rate":0.25}'
 ```
 
 La invitación de un trabajador también se puede hacer por API: `POST /staff` y `PATCH /staff/<id>/resend-invitation` devuelven `invitation_link`, el mismo enlace de activación que muestra el panel (y que el backend imprime en su log, `docker compose logs backend | grep "\[email\]"`).
@@ -229,7 +229,8 @@ Cada feature sigue la misma cadena: [constitución](docs/constitution.md) → sp
 
 - Los horarios libres se calculan con la **hora local del servidor**: no hay zonas horarias por negocio. La zona por defecto es `America/Santiago`, que tiene horario de verano: las ventanas de atención son hora de pared y el cálculo de horarios libres tiene un test del fin de semana del cambio de hora, pero no hay pruebas de punta a punta de reservas que crucen ese cambio.
 - **No se envían notificaciones** al cliente: el enlace de gestión se muestra en pantalla al reservar o reprogramar.
-- La agenda del panel es **solo lectura**: crear o cancelar turnos, bloquear horarios y los pagos existen únicamente como API.
+- **La ventana de corrección usa días UTC**: «No llegó» y «Completado» se pueden deshacer hasta las 23:59:59.999 UTC del día siguiente al turno (en Chile, entre las 20:00 y las 21:00 locales). La pantalla solo ofrece el botón dentro de la ventana y la API es la autoridad. Los períodos de la pantalla de pagos, en cambio, usan el día local del navegador.
+- Desde el panel **no se reprograma** un turno: se cancela y se crea otro (el cliente sí puede reprogramar con su enlace). Crear un turno no valida la disponibilidad —el panel existe para cargar lo que ocurre fuera de la reserva pública—: solo advierte si queda fuera del horario semanal.
 - El **enlace de activación** de un trabajador lo entrega el dueño a mano: no se guarda en claro, así que solo se ve al invitar o reenviar (para obtener otro, «Reenviar invitación»).
 - El owner no atiende turnos, pero la spec 001 todavía permite asignarle uno de forma explícita.
 - La conexión a la base no ofrece una opción de SSL propia: se activa solo con `NODE_ENV=production`, y la base de Compose no lo soporta.
@@ -241,7 +242,7 @@ Cada feature sigue la misma cadena: [constitución](docs/constitution.md) → sp
 - Con Docker, la IP que ve nginx es la del cliente solo si Docker no la enmascara (por ejemplo, con Docker Desktop o redes rootless todos pueden aparecer con la IP de la puerta de enlace y compartir un mismo cupo).
 - **Sin recuperación de contraseña** ni verificación de email.
 
-Pendientes de producto: notificaciones por email o WhatsApp, zonas horarias por negocio, pantallas del panel para turnos y pagos, y recuperación de contraseña.
+Pendientes de producto: notificaciones por email o WhatsApp, zonas horarias por negocio, pantalla para las comisiones, y recuperación de contraseña.
 
 ## Estructura del repositorio
 

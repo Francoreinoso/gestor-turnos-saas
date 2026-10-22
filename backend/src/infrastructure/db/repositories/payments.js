@@ -1,5 +1,5 @@
 import { eq, and, gte, lte, desc, sql, count } from 'drizzle-orm';
-import { payments, appointments, users } from '../../../../db/schema.js';
+import { payments, appointments, users, clients, services } from '../../../../db/schema.js';
 
 const sumField = (column) => sql`coalesce(sum(${column}), 0)`.mapWith(Number);
 
@@ -65,6 +65,8 @@ export const paymentRepo = {
         scheduledAt: appointments.scheduled_at,
         employeeId: payments.assigned_user_id,
         employeeName: users.name,
+        clientName: clients.name, // spec 010 RF-23: el detalle muestra cliente y servicio del turno
+        serviceName: services.name,
         amount: payments.amount,
         employeeAmount: payments.employee_amount,
         businessAmount: payments.business_amount,
@@ -72,6 +74,8 @@ export const paymentRepo = {
       .from(payments)
       .innerJoin(appointments, eq(payments.appointment_id, appointments.id))
       .leftJoin(users, eq(payments.assigned_user_id, users.id))
+      .leftJoin(clients, eq(appointments.client_id, clients.id))
+      .leftJoin(services, eq(appointments.service_id, services.id))
       .where(and(...scopeConditions(params)))
       .orderBy(desc(appointments.scheduled_at))
       .limit(limit),

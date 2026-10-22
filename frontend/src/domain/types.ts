@@ -69,3 +69,38 @@ export interface AuthPayload {
   account_id: string;
   role: Role;
 }
+
+// spec 010 RF-20..RF-24 — pagos. El resumen trae números; el detalle, montos decimales como texto.
+export interface EmployeeSummary {
+  employeeId: string;
+  employeeName: string;
+  totalAmount: number;
+  employeeAmount: number;
+  businessAmount: number;
+}
+
+export interface PaymentsSummary {
+  totalAmount: number;
+  employeeAmount: number;
+  businessAmount: number;
+  paymentCount: number;
+  byEmployee?: EmployeeSummary[]; // solo para el owner
+}
+
+export interface Payment {
+  id: string;
+  appointmentId: string;
+  scheduledAt: string;
+  employeeId: string | null;
+  employeeName: string | null;
+  clientName: string | null;
+  serviceName: string | null;
+  amount: string;
+  employeeAmount: string | null; // null = sin comisión definida
+  businessAmount: string | null;
+}
+
+export interface PaymentsPage {
+  payments: Payment[];
+  hasMore: boolean;
+}

@@ -120,6 +120,7 @@ router.patch('/:id/correct', auth, wrap(async (req, res) => {
   const updated = await correctAppointment(db, {
     id: req.params.id,
     accountId: req.user.account_id,
+    actor: actorOf(req),
     now: new Date(),
   }, repos);
   res.json(updated);

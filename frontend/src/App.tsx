@@ -8,6 +8,7 @@ import ManagePage from './pages/ManagePage';
 import ServicesPage from './pages/ServicesPage';
 import StaffPage from './pages/StaffPage';
 import SchedulePage from './pages/SchedulePage';
+import PaymentsPage from './pages/PaymentsPage';
 import ActivatePage from './pages/ActivatePage';
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -42,6 +43,9 @@ export default function App() {
           <Route path="/login"        element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/owner/agenda" element={<OwnerRoute><DashboardPage /></OwnerRoute>} />
           <Route path="/staff/agenda" element={<StaffRoute><DashboardPage /></StaffRoute>} />
+          {/* spec 010 RF-26: pagos, solo lectura, con la misma guarda por rol */}
+          <Route path="/owner/pagos" element={<OwnerRoute><PaymentsPage /></OwnerRoute>} />
+          <Route path="/staff/pagos" element={<StaffRoute><PaymentsPage /></StaffRoute>} />
           {/* spec 009 RF-3: pantallas de gestión, con la misma guarda por rol que las agendas */}
           <Route path="/owner/servicios" element={<OwnerRoute><ServicesPage /></OwnerRoute>} />
           <Route path="/owner/equipo" element={<OwnerRoute><StaffPage /></OwnerRoute>} />

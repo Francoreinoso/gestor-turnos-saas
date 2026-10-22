@@ -15,11 +15,13 @@ export default function AppNav() {
   const links = user.role === 'owner'
     ? [
         { to: roleHome('owner'), label: 'Agenda' },
+        { to: '/owner/pagos', label: 'Pagos' },
         { to: '/owner/servicios', label: 'Servicios' },
         { to: '/owner/equipo', label: 'Equipo' },
       ]
     : [
         { to: roleHome('staff'), label: 'Agenda' },
+        { to: '/staff/pagos', label: 'Pagos' },
         { to: '/staff/horario', label: 'Mi horario' },
       ];
 

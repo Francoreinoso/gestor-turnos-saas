@@ -94,3 +94,18 @@ test('el README real dice que servicios, equipo y horarios tienen pantalla', () 
   assert.ok(readme.includes('APP_URL'), 'APP_URL debe estar documentada');
   assert.ok(readme.includes('/activar'), 'el README debe explicar el enlace de activación');
 });
+
+// spec 010 criterio 4: turnos y pagos ya tienen pantalla; solo las comisiones siguen por API.
+test('el README real dice que turnos y pagos tienen pantalla', () => {
+  const readme = read('README.md');
+  for (const row of ['Ver turnos', 'Crear turnos desde el panel', 'Bloquear horarios', 'Resumen financiero y pagos']) {
+    const line = readme.split('\n').find(l => l.startsWith(`| ${row}`));
+    assert.ok(line, `falta la fila "${row}" en la tabla de roles`);
+    assert.ok(line.trimEnd().endsWith('| Pantalla |'), `"${row}" debe figurar como Pantalla: ${line}`);
+  }
+  assert.ok(!/agenda del panel es \*\*solo lectura\*\*/i.test(readme), 'la agenda ya no es de solo lectura');
+  assert.ok(!/pantallas del panel para turnos y pagos/i.test(readme), 'las pantallas de turnos y pagos ya no son un pendiente');
+  assert.ok(/\/owner\/pagos/.test(readme), 'el README debe mencionar la pantalla de pagos');
+  assert.ok(/ventana de corrección/i.test(readme), 'el README debe documentar que la ventana de corrección usa UTC');
+  assert.ok(/commission/.test(readme), 'las comisiones siguen por API y el README muestra cómo');
+});

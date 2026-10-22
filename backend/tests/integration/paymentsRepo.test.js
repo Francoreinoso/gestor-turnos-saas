@@ -177,4 +177,7 @@ test('findForList: ordena y filtra por scheduled_at del turno, no por created_at
     assert.equal(rows.length, 2);
     // más reciente primero: Sep 20, luego Sep 12 — nunca por created_at (los 3 se insertaron en orden Sep5, Sep20, Sep12)
     assert.deepEqual(rows.map(r => r.scheduledAt), [new Date('2026-09-20T10:00:00Z'), new Date('2026-09-12T10:00:00Z')]);
+    // spec 010 RF-23: cada fila trae el cliente y el servicio del turno
+    assert.equal(rows[0].clientName, 'Cliente Test');
+    assert.equal(rows[0].serviceName, 'Servicio Test');
   }));

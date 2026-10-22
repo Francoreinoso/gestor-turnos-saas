@@ -14,16 +14,16 @@ const renderNav = (role: string, path: string) => {
   );
 };
 
-test('RF-2: el owner ve Agenda, Servicios y Equipo', () => {
+test('RF-2, spec 010 RF-26: el owner ve Agenda, Pagos, Servicios y Equipo', () => {
   renderNav('owner', '/owner/agenda');
   const links = screen.getAllByRole('link').map(l => [l.textContent, l.getAttribute('href')]);
-  expect(links).toEqual([['Agenda', '/owner/agenda'], ['Servicios', '/owner/servicios'], ['Equipo', '/owner/equipo']]);
+  expect(links).toEqual([['Agenda', '/owner/agenda'], ['Pagos', '/owner/pagos'], ['Servicios', '/owner/servicios'], ['Equipo', '/owner/equipo']]);
 });
 
-test('RF-2: el staff ve Agenda y Mi horario', () => {
+test('RF-2, spec 010 RF-26: el staff ve Agenda, Pagos y Mi horario', () => {
   renderNav('staff', '/staff/agenda');
   const links = screen.getAllByRole('link').map(l => [l.textContent, l.getAttribute('href')]);
-  expect(links).toEqual([['Agenda', '/staff/agenda'], ['Mi horario', '/staff/horario']]);
+  expect(links).toEqual([['Agenda', '/staff/agenda'], ['Pagos', '/staff/pagos'], ['Mi horario', '/staff/horario']]);
 });
 
 test('el enlace de la página actual tiene aria-current="page"', () => {

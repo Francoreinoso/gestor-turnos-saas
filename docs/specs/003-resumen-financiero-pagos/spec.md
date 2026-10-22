@@ -331,3 +331,9 @@ corrección.
 - **D11** — Límite del listado detallado: corta en silencio en los más
   recientes e indica que hay más pagos no incluidos; el resumen agregado
   nunca se ve afectado por este límite.
+
+## Notas posteriores
+
+- **[spec 010](../010-agenda-y-pagos-en-panel/spec.md), D2 (sobre RF-12 y RF-14):** los presets siguen definidos en UTC, sin cambios en el contrato. Las pantallas de pagos no los usan: calculan el período en el día local del navegador y lo envían como rango libre (RF-15).
+- **[spec 010](../010-agenda-y-pagos-en-panel/spec.md), RF-1 (sobre RF-19 y RF-20):** `PATCH /appointments/:id/correct` aplica el alcance por rol de la spec 001: un staff que corrige un turno ajeno, o un bloqueo de negocio, recibe 404 antes de evaluar la transición o la ventana. La ventana de corrección conserva su definición en UTC (D3).
+- **[spec 010](../010-agenda-y-pagos-en-panel/spec.md), RF-23:** cada fila de `GET /payments` suma `clientName` y `serviceName` (campos nuevos, aditivos) para que el detalle muestre cliente y servicio.

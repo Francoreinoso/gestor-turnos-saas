@@ -65,15 +65,15 @@ test('RF-3: un staff que abre /owner/equipo vuelve a su agenda', async () => {
   window.history.pushState({}, '', '/owner/equipo');
   fetchMock.mockImplementation(async () => json(200, []));
   render(<App />);
-  await screen.findByText(/sin turnos para este día/i);
+  await screen.findByText(/no hay turnos para este día/i);
   expect(window.location.pathname).toBe('/staff/agenda');
 });
 
 test('RF-3: un owner que abre /staff/horario vuelve a su agenda', async () => {
   window.history.pushState({}, '', '/staff/horario');
-  fetchMock.mockImplementation(async () => json(200, []));
+  fetchMock.mockImplementation(async (url: string) => json(200, String(url).includes('/staff') ? { staff: [] } : []));
   render(<App />);
-  await screen.findByText(/sin turnos para este día/i);
+  await screen.findByText(/no hay turnos para este día/i);
   expect(window.location.pathname).toBe('/owner/agenda');
 });
 
@@ -110,4 +110,44 @@ test('RF-25: /activar abre sin sesión', async () => {
   window.history.pushState({}, '', '/activar?token=tok');
   render(<App />);
   expect(await screen.findByRole('heading', { name: /activa tu cuenta/i })).toBeInTheDocument();
+});
+
+// spec 010 RF-26 — pantalla de pagos con las mismas guardas por rol
+test('RF-26: el owner abre /owner/pagos y el staff /staff/pagos', async () => {
+  fetchMock.mockImplementation(async (url: string) => json(200, String(url).includes('/payments/summary')
+    ? { totalAmount: 0, employeeAmount: 0, businessAmount: 0, paymentCount: 0, byEmployee: [] }
+    : String(url).includes('/payments') ? { payments: [], hasMore: false } : { staff: [] }));
+  window.history.pushState({}, '', '/owner/pagos');
+  const { unmount } = render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Pagos' })).toBeInTheDocument();
+  unmount();
+
+  localStorage.setItem('token', staffJwt);
+  window.history.pushState({}, '', '/staff/pagos');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Pagos' })).toBeInTheDocument();
+  expect(window.location.pathname).toBe('/staff/pagos');
+});
+
+test('RF-26: un staff que abre /owner/pagos vuelve a su agenda y un owner que abre /staff/pagos, a la suya', async () => {
+  fetchMock.mockImplementation(async (url: string) => json(200, String(url).includes('/staff') ? { staff: [] } : []));
+  localStorage.setItem('token', staffJwt);
+  window.history.pushState({}, '', '/owner/pagos');
+  const { unmount } = render(<App />);
+  await screen.findByText(/no hay turnos para este día/i);
+  expect(window.location.pathname).toBe('/staff/agenda');
+  unmount();
+
+  localStorage.setItem('token', ownerJwt);
+  window.history.pushState({}, '', '/staff/pagos');
+  render(<App />);
+  await screen.findByText(/no hay turnos para este día/i);
+  expect(window.location.pathname).toBe('/owner/agenda');
+});
+
+test('RF-26: sin sesión, /owner/pagos lleva a /login', async () => {
+  localStorage.clear();
+  window.history.pushState({}, '', '/owner/pagos');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: /iniciar sesión/i })).toBeInTheDocument();
 });

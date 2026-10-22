@@ -106,6 +106,34 @@ jobs:
           echo "$LINK"
           case "$LINK" in http://localhost:5173/activar?token=*) ;; *) echo "invitation_link inesperado"; exit 1 ;; esac
           curl --fail --silent --show-error "http://localhost:5173/activar?token=x" | grep -q '<div id="root">'
+      # spec 010 RF-1, RF-17, criterio 3: un turno pasado nace completado con su pago; un trabajador ajeno no puede
+      # corregirlo (404) y el owner sí (200), y el resumen cambia en cada paso.
+      - name: Turno pasado, corrección con alcance por rol y resumen
+        run: |
+          API=http://localhost:5173/api
+          JSON='Content-Type: application/json'
+          login() { curl --fail --silent --show-error "$API/auth/login" -H "$JSON" -d "{\"email\":\"$1\",\"password\":\"demo1234\"}" | jq -r .token; }
+          OWNER=$(login demo.owner@example.com)
+          MARTIN=$(login demo.martin@example.com)
+          test -n "$OWNER" && test "$OWNER" != null && test -n "$MARTIN" && test "$MARTIN" != null
+          AUTH="Authorization: Bearer $OWNER"
+          LUCIA_ID=$(curl --fail --silent --show-error "$API/staff" -H "$AUTH" | jq -r '.staff[] | select(.email=="demo.lucia@example.com") | .id')
+          SERVICE_ID=$(curl --fail --silent --show-error "$API/services?active=true" -H "$AUTH" | jq -r '.[0].id')
+          FROM=$(date -u -d '2 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          TO=$(date -u -d '1 day' +%Y-%m-%dT%H:%M:%SZ)
+          count() { curl --fail --silent --show-error "$API/payments/summary?date_from=$FROM&date_to=$TO" -H "$AUTH" | jq -r .paymentCount; }
+          BEFORE=$(count)
+          START=$(date -u -d '3 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          APPT=$(curl --fail --silent --show-error "$API/appointments" -H "$AUTH" -H "$JSON" \
+            -d "{\"service_id\":\"$SERVICE_ID\",\"employee_id\":\"$LUCIA_ID\",\"scheduled_at\":\"$START\",\"client\":{\"name\":\"Smoke Pago\",\"email\":\"smoke-pago-$GITHUB_RUN_ID@example.com\"}}")
+          echo "$APPT" | jq -e '.appointment.status == "completado"'
+          ID=$(echo "$APPT" | jq -r .appointment.id)
+          test "$(count)" -eq $((BEFORE + 1))
+          CODE=$(curl --silent --output /dev/null --write-out '%{http_code}' -X PATCH "$API/appointments/$ID/correct" -H "Authorization: Bearer $MARTIN")
+          test "$CODE" = 404
+          test "$(count)" -eq $((BEFORE + 1))
+          curl --fail --silent --show-error -X PATCH "$API/appointments/$ID/correct" -H "$AUTH" | jq -e '.status == "no_llego"'
+          test "$(count)" -eq "$BEFORE"
       # spec 008 RF-17, RF-22: cabeceras de las respuestas estáticas del frontend (incluido un 404 y la ruta de respaldo).
       - name: Cabeceras de seguridad del frontend
         run: |
