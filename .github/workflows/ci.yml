@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tz: [UTC, America/Argentina/Buenos_Aires]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: saas_test
+          POSTGRES_USER: saas
+          POSTGRES_PASSWORD: saas
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U saas -d saas_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://saas:saas@localhost:5432/saas_test
+      JWT_SECRET: ci-only-secret
+      TZ: ${{ matrix.tz }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm test
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  # Reproduce el inicio rápido del README: prueba nginx, el proxy /api, el fallback de rutas y el seed.
+  smoke:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DEMO_ID: 00000000-0000-4000-8000-000000000001
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - run: docker compose config -q
+      - run: docker compose up --build --wait --wait-timeout 300
+      - name: GET /health
+        run: curl --fail --silent --show-error http://localhost:3000/health
+      - name: API pública a través del proxy del frontend
+        run: |
+          curl --fail --silent --show-error "http://localhost:5173/api/public/accounts/$DEMO_ID" | tee account.json
+          grep -q '"services":\[{' account.json
+      - name: Fallback de rutas del frontend
+        run: curl --fail --silent --show-error "http://localhost:5173/reservar/$DEMO_ID" | grep -q '<div id="root">'
+      - if: failure()
+        run: docker compose logs
+      - if: always()
+        run: docker compose down -v

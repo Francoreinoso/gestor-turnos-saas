@@ -248,6 +248,10 @@ Diferencias funcionales `owner` vs `staff`:
 
 *Las pantallas públicas usan `apiPublic` (sin JWT y sin cerrar sesión ante un 401), de modo que un owner logueado que prueba la reserva no pierde su sesión.*
 
+### Salud del servicio (spec 006)
+
+`GET /health` (fuera de `/public`, sin autenticación ni limitador) responde `200 { "status": "ok" }` si la base contesta y `503 { "status": "unavailable" }` si no, sin exponer detalles. Lo usan los healthchecks de Docker Compose y la prueba de humo de la CI.
+
 ## 5. Setup técnico
 
 - **ORM:** Drizzle, no Sequelize — el proyecto depende de lógica que vive en la base de datos (trigger de solapamiento, `CHECK` condicional, índice único funcional sobre `lower(email)`), y las migraciones `.sql` reales de Drizzle permiten escribir esa lógica en el mismo archivo/lenguaje, sin mezclar SQL crudo dentro de wrappers JS como exigiría Sequelize.
@@ -266,10 +270,13 @@ gestor-turnos/
 │   │       ├── db/
 │   │       └── integrations/
 │   ├── db/
-│   │   ├── schema.ts
+│   │   ├── schema.js
+│   │   ├── migrate.js
+│   │   ├── seed.js          # cuenta demo (spec 006)
 │   │   └── migrations/
 │   ├── tests/
-│   ├── drizzle.config.ts
+│   ├── drizzle.config.js
+│   ├── Dockerfile
 │   └── package.json
 ├── frontend/
 │   ├── src/
@@ -277,17 +284,23 @@ gestor-turnos/
 │   │   ├── components/
 │   │   ├── pages/
 │   │   └── services/
+│   ├── Dockerfile           # build + nginx (spec 006)
+│   ├── nginx.conf
 │   └── package.json
 ├── docs/
-│   └── diseno-gestor-turnos.md
+│   ├── constitution.md
+│   ├── diseno-gestor-turnos.md
+│   └── specs/               # una carpeta por spec: spec, plan y tasks
+├── .github/workflows/       # CI (spec 006)
 ├── docker-compose.yml
+├── .env.example
 └── README.md
 ```
 
 ## 6. Pendiente
 
-- **Zonas horarias por negocio** (candidato a spec 006): los horarios libres se calculan en la hora local del servidor y el frontend asume que navegador y servidor están en la misma zona.
+- **Zonas horarias por negocio** (candidato a una spec futura): los horarios libres se calculan en la hora local del servidor y el frontend asume que navegador y servidor están en la misma zona.
 - **Envío del enlace de gestión** por email/WhatsApp (`notifications`): hoy el cliente lo recibe solo en pantalla, al reservar o reprogramar.
 
-- **`payments`, `notifications`, `attachments`**: definidos en el ERD inicial, sin especificación de endpoints todavía.
+- **`notifications`, `attachments`**: definidos en el ERD inicial, sin especificación de endpoints todavía. `payments` y la disponibilidad semanal ya están implementados (specs 003 y 004).
 - Implementación de JWT (middleware, expiración, refresh tokens) — el diseño de *qué* autoriza cada rol ya está resuelto; falta el detalle de implementación del propio JWT en sí (esto es más convención que decisión de diseño, y AlojaFacil ya tiene el patrón resuelto para reutilizar).

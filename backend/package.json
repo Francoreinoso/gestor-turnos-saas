@@ -10,6 +10,7 @@
     "test:integration": "node --test tests/integration/**/*.test.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node db/migrate.js",
+    "db:seed": "node db/seed.js",
     "db:studio": "drizzle-kit studio"
   },
   "keywords": [],

@@ -1,22 +1,61 @@
 services:
   db:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Un solo uso: aplica las migraciones y, si SEED_DEMO=true, siembra la demo solo si no existe.
+  # Si falla, el backend no arranca; el motivo queda en `docker compose logs setup`.
+  setup:
+    build: ./backend
+    restart: "no"
+    command: ["sh", "-c", "node db/migrate.js && if [ \"$$SEED_DEMO\" = \"true\" ]; then node db/seed.js --if-missing; fi"]
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      SEED_DEMO: ${SEED_DEMO:-true}
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
+    depends_on:
+      db:
+        condition: service_healthy
+
   backend:
     build: ./backend
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      NODE_ENV: development
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
     depends_on:
-      - db
+      setup:
+        condition: service_completed_successfully
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    environment:
+      TZ: ${TZ:-America/Argentina/Buenos_Aires}
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   db_data:

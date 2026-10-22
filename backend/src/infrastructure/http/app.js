@@ -10,11 +10,15 @@ import publicRoutes from './routes/public.js';
 import staffRoutes from './routes/staff.js';
 import meRoutes from './routes/me.js';
 import paymentRoutes from './routes/payments.js';
+import healthRoutes from './routes/health.js';
 import errorHandler from './middleware/errorHandler.js';
 import { startCron } from '../integrations/cron.js';
 
 const app = express();
 app.use(express.json());
+
+// spec 006 RF-15: sin auth ni limitador, lo consulta el orquestador con frecuencia.
+app.use('/health', healthRoutes);
 
 app.use('/accounts', accountRoutes);
 app.use('/auth', authRoutes);
