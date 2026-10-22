@@ -56,6 +56,16 @@ test('apiPublic usa el prefijo /api, serializa el body y soporta PATCH sin body'
   expect((fetchMock.mock.calls[1][1] as RequestInit).body).toBeUndefined();
 });
 
+// spec 009 T09
+test('api.put manda PUT con el cuerpo serializado y el JWT del panel', async () => {
+  fetchMock.mockResolvedValue(respond(200, []));
+  await api.put('/staff/u1/availability', [{ day_of_week: 1 }]);
+  const init = fetchMock.mock.calls[0][1] as RequestInit;
+  expect(init.method).toBe('PUT');
+  expect(init.body).toBe('[{"day_of_week":1}]');
+  expect(sentHeaders().Authorization).toBe('Bearer jwt-del-panel');
+});
+
 test('RF-22: un fallo de red se convierte en ApiError network_error', async () => {
   fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
   await expect(apiPublic.get('/public/accounts/x')).rejects.toMatchObject({ status: 0, message: 'network_error' });

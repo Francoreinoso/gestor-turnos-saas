@@ -4,6 +4,7 @@ import { parseInput } from '../domain/validation.js';
 import { inviteStaffBody } from '../domain/schemas/staff.js';
 import { decideInviteAction } from '../domain/staffInvite.js';
 import { toPublicUser } from '../domain/publicUser.js';
+import { buildInvitationLink } from '../domain/invitation.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 const TOKEN_TTL_MS = 72 * 60 * 60 * 1000; // RF-9
@@ -11,7 +12,7 @@ const TOKEN_TTL_MS = 72 * 60 * 60 * 1000; // RF-9
 // spec 002 — invitar (alta) de un trabajador: RF-1..RF-9, RF-13..RF-15.
 // spec 008 RF-4: recibe el `body` crudo; la forma (incluido un body ausente o que no es objeto → 400 invalid_body) la valida
 // parseInput, después del chequeo de rol.
-export const inviteStaff = async (db, { accountId, actor, body }, repos) => {
+export const inviteStaff = async (db, { accountId, actor, body, appUrl }, repos) => {
   if (actor.role === 'staff') throw httpErr(403, 'forbidden'); // RF-14
   const { name, email, commission_rate: commissionRate } = parseInput(inviteStaffBody, body); // RF-5, RF-4
 
@@ -51,8 +52,9 @@ export const inviteStaff = async (db, { accountId, actor, body }, repos) => {
     });
 
     // RF-15: el envío ocurre dentro de la transacción — si falla, el rollback deja todo intacto.
-    await repos.email.sendInvitation({ to: user.email, link: token });
+    const invitationLink = buildInvitationLink(appUrl, token); // spec 009 RF-21
+    await repos.email.sendInvitation({ to: user.email, link: invitationLink });
 
-    return { user: toPublicUser(user), action };
+    return { user: toPublicUser(user), action, invitation_link: invitationLink };
   });
 };

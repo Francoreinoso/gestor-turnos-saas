@@ -13,6 +13,7 @@ import { replaceStaffAvailability } from '../../../application/replaceStaffAvail
 
 import { parseInput } from '../../../domain/validation.js';
 import { listStaffQuery } from '../../../domain/schemas/staff.js';
+import { getAppUrl } from '../appUrl.js';
 import { uuidParams } from '../middleware/uuidParams.js';
 
 const router = express.Router();
@@ -23,12 +24,14 @@ const actorOf = (req) => ({ id: req.user.id, role: req.user.role });
 
 // spec 002 RF-1..RF-9, RF-13..RF-15 — invitar (alta) a un trabajador.
 router.post('/', auth, wrap(async (req, res) => {
-  const { user, action } = await inviteStaff(db, {
+  const { user, action, invitation_link } = await inviteStaff(db, {
     accountId: req.user.account_id,
     actor: actorOf(req),
     body: req.body, // spec 008 RF-4: se valida en el caso de uso, después del chequeo de rol
+    appUrl: getAppUrl(),
   }, repos);
-  res.status(action === 'create' ? 201 : 200).json({ user });
+  // spec 009 RF-21: `invitation_link` solo viaja en esta respuesta y en la del reenvío, y solo al owner (el caso de uso rechaza a staff).
+  res.status(action === 'create' ? 201 : 200).json({ user, action, invitation_link }); // `action` (create | reactivate | resend) deja a la pantalla distinguir una reactivación (spec 009 R5)
 }));
 
 // spec 002 RF-31..RF-33 — listado.
@@ -89,6 +92,7 @@ router.patch('/:id/resend-invitation', auth, wrap(async (req, res) => {
     id: req.params.id,
     accountId: req.user.account_id,
     actor: actorOf(req),
+    appUrl: getAppUrl(),
   }, repos);
   res.json(result);
 }));

@@ -14,12 +14,13 @@ Con pantalla:
 
 - **Reserva pública sin login**: el cliente elige servicio, profesional (o "Cualquiera"), día y horario, y recibe un enlace de gestión para ver, cancelar o reprogramar su turno.
 - **Agenda del día**, solo lectura: el dueño ve todos los turnos del negocio y cada profesional los propios.
+- **Servicios** (`/owner/servicios`): alta, edición, cambio de precio con su historial y baja lógica.
+- **Equipo** (`/owner/equipo`): el dueño invita a un trabajador, copia el **enlace de activación** (`/activar?token=…`, vence en 72 horas, todavía no se envía por email), lo reenvía, edita y da de baja.
+- **Horario semanal** por profesional (`/owner/equipo/<id>/horario`, y `/staff/horario` para el propio trabajador, que además edita ahí su nombre y contraseña), del que se derivan los horarios libres.
+- **Activación de la cuenta** (`/activar`): el trabajador invitado define su contraseña desde el enlace y entra directo a su horario.
 
-Solo por API (todavía sin pantalla; ver [Operar el negocio sin pantallas](#operar-el-negocio-sin-pantallas-por-ahora)):
+Solo por API (todavía sin pantalla; ver [Operar por API lo que aún no tiene pantalla](#operar-por-api-lo-que-aún-no-tiene-pantalla)):
 
-- **Servicios**: alta, edición, cambio de precio con su historial y baja lógica.
-- **Gestión de trabajadores**: invitación, activación, edición, baja y revocación de acceso.
-- **Horario semanal** por profesional, del que se derivan los horarios libres.
 - **Turnos desde el panel**: alta, edición, cancelación, bloqueos y corrección de asistencia.
 - **Pagos y comisiones**: cada turno completado genera un pago con la comisión del profesional; resumen financiero por período.
 
@@ -79,6 +80,7 @@ Las variables de `.env` (todas con valores de desarrollo que funcionan tal cual)
 |---|---|
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos; `docker-compose.yml` arma `DATABASE_URL` a partir de ellas |
 | `JWT_SECRET` | Firma de los JWT. **Cambiarla** fuera de desarrollo |
+| `APP_URL` | URL pública del frontend (por defecto `http://localhost:5173`): base de los enlaces de activación de trabajadores. En producción debe ser `https://` |
 | `SEED_DEMO` | `true` siembra la cuenta demo si todavía no existe; `false` solo migra |
 | `TZ` | Zona horaria de los contenedores (por defecto `America/Santiago`) |
 | `DB_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | Puertos publicados, por si 5432, 3000 o 5173 están ocupados |
@@ -132,9 +134,9 @@ El enlace de gestión de un turno agendado (con su token) lo imprime el seed al 
 | Reservar, cancelar o reprogramar | — | — | Sí, con el enlace de gestión | Pantalla |
 | Crear turnos desde el panel | Sí, para cualquier profesional | Sí, para sí mismo | — | Solo API |
 | Bloquear horarios | Propios, de cualquiera o del negocio entero | Solo los propios | — | Solo API |
-| Editar servicios y precios | Sí | No | — | Solo API |
-| Gestionar trabajadores | Sí | No | — | Solo API |
-| Editar el horario semanal | De cualquier trabajador | Solo el propio | — | Solo API |
+| Editar servicios y precios | Sí | No | — | Pantalla |
+| Gestionar trabajadores | Sí | No | — | Pantalla |
+| Editar el horario semanal | De cualquier trabajador | Solo el propio | — | Pantalla |
 | Resumen financiero y pagos | Todos | Los propios | — | Solo API |
 
 Un recurso fuera de alcance responde 404 y no 403, para no confirmar que existe (detalle en el [diseño §3.10](docs/diseno-gestor-turnos.md)).
@@ -156,9 +158,9 @@ REST con JSON. Las rutas del panel exigen `Authorization: Bearer <JWT>`; las pú
 
 La especificación completa está en el [documento de diseño §4](docs/diseno-gestor-turnos.md).
 
-### Operar el negocio sin pantallas (por ahora)
+### Operar por API lo que aún no tiene pantalla
 
-El panel todavía no tiene pantallas para administrar servicios, trabajadores ni horarios: se hace con la API. Estos comandos funcionan contra la demo (con Docker la API queda en `http://localhost:3000`, solo accesible desde tu máquina) y usan [`jq`](https://jqlang.org) para leer el token; sin `jq`, copia el valor de `"token"` de la respuesta.
+Servicios, equipo y horarios se gestionan desde el panel (ver arriba). Lo que todavía no tiene pantalla —crear o bloquear turnos desde el panel y los pagos— se opera con la API. Estos comandos funcionan contra la demo (con Docker la API queda en `http://localhost:3000`, solo accesible desde tu máquina) y usan [`jq`](https://jqlang.org) para leer el token; sin `jq`, copia el valor de `"token"` de la respuesta.
 
 ```bash
 API=http://localhost:3000
@@ -169,27 +171,11 @@ TOKEN=$(curl -s $API/auth/login -H "$JSON" \
   -d '{"email":"demo.owner@example.com","password":"demo1234"}' | jq -r .token)
 AUTH="Authorization: Bearer $TOKEN"
 
-# 2. Servicios: listar, crear, cambiar el precio (queda en el historial) y dar de baja
-curl -s $API/services -H "$AUTH"
-curl -s $API/services -H "$AUTH" -H "$JSON" -d '{"name":"Tintura","duration_minutes":90,"price":"25000"}'
-curl -s -X PATCH $API/services/<id>/prices -H "$AUTH" -H "$JSON" -d '{"price":"27000"}'
-curl -s -X PATCH $API/services/<id>/deactivate -H "$AUTH"
-
-# 3. Trabajadores: listar e invitar
-curl -s $API/staff -H "$AUTH"
-curl -s $API/staff -H "$AUTH" -H "$JSON" -d '{"name":"Camila Rojas","email":"camila@example.com","commission_rate":0.4}'
-
-# 4. Activar la cuenta de la persona invitada. Todavía no se envía el email: el token de la invitación
-#    queda en el log del backend (`docker compose logs backend | grep "\[email\]"`; sin Docker, en su terminal).
-curl -s $API/public/staff-invitations/activate -H "$JSON" -d '{"token":"<token de la invitación>","password":"camila-2026"}'
-
-# 5. Su horario semanal (0 = domingo … 6 = sábado); reemplaza el horario completo
-curl -s -X PUT $API/staff/<id>/availability -H "$AUTH" -H "$JSON" \
-  -d '[{"day_of_week":1,"start_time":"09:00","end_time":"13:00"},{"day_of_week":3,"start_time":"14:00","end_time":"18:00"}]'
-
-# 6. Resumen financiero del mes
+# 2. Resumen financiero del mes
 curl -s "$API/payments/summary?period=este_mes" -H "$AUTH"
 ```
+
+La invitación de un trabajador también se puede hacer por API: `POST /staff` y `PATCH /staff/<id>/resend-invitation` devuelven `invitation_link`, el mismo enlace de activación que muestra el panel (y que el backend imprime en su log, `docker compose logs backend | grep "\[email\]"`).
 
 Las contraseñas deben tener entre 8 caracteres y 72 bytes. Cada ruta, con sus cuerpos y códigos de error, está en el [documento de diseño §4](docs/diseno-gestor-turnos.md).
 
@@ -243,8 +229,8 @@ Cada feature sigue la misma cadena: [constitución](docs/constitution.md) → sp
 
 - Los horarios libres se calculan con la **hora local del servidor**: no hay zonas horarias por negocio. La zona por defecto es `America/Santiago`, que tiene horario de verano: las ventanas de atención son hora de pared y el cálculo de horarios libres tiene un test del fin de semana del cambio de hora, pero no hay pruebas de punta a punta de reservas que crucen ese cambio.
 - **No se envían notificaciones** al cliente: el enlace de gestión se muestra en pantalla al reservar o reprogramar.
-- El panel **solo muestra la agenda del día, en solo lectura**: crear o cancelar turnos, bloquear horarios, y administrar servicios, trabajadores, horarios y pagos existen únicamente como API.
-- La **activación de un trabajador invitado no tiene pantalla** (solo endpoint).
+- La agenda del panel es **solo lectura**: crear o cancelar turnos, bloquear horarios y los pagos existen únicamente como API.
+- El **enlace de activación** de un trabajador lo entrega el dueño a mano: no se guarda en claro, así que solo se ve al invitar o reenviar (para obtener otro, «Reenviar invitación»).
 - El owner no atiende turnos, pero la spec 001 todavía permite asignarle uno de forma explícita.
 - La conexión a la base no ofrece una opción de SSL propia: se activa solo con `NODE_ENV=production`, y la base de Compose no lo soporta.
 - **Faltan capturas de pantalla** en este README; se sumarán cuando la interfaz esté estable.
@@ -255,7 +241,7 @@ Cada feature sigue la misma cadena: [constitución](docs/constitution.md) → sp
 - Con Docker, la IP que ve nginx es la del cliente solo si Docker no la enmascara (por ejemplo, con Docker Desktop o redes rootless todos pueden aparecer con la IP de la puerta de enlace y compartir un mismo cupo).
 - **Sin recuperación de contraseña** ni verificación de email.
 
-Pendientes de producto: notificaciones por email o WhatsApp, zonas horarias por negocio, pantallas del panel para servicios, trabajadores y horarios, activación de trabajadores y recuperación de contraseña.
+Pendientes de producto: notificaciones por email o WhatsApp, zonas horarias por negocio, pantallas del panel para turnos y pagos, y recuperación de contraseña.
 
 ## Estructura del repositorio
 

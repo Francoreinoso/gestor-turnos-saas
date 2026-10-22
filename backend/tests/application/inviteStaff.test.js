@@ -22,10 +22,10 @@ const makeRepos = (o = {}) => ({
 
 const db = { transaction: async (fn) => fn(db) };
 const owner = { id: 'own-1', role: 'owner', account_id: 'acc-1' };
-const base = { accountId: 'acc-1', actor: owner, name: 'Ana', email: 'ana@test.com' };
+const base = { accountId: 'acc-1', actor: owner, name: 'Ana', email: 'ana@test.com', appUrl: 'https://app.test' };
 // spec 008 RF-4: el caso de uso recibe el `body` crudo; estos tests arman campos sueltos, así que se adaptan acá.
-const inviteStaff = (db, { accountId, actor, name, email, commissionRate }, repos) =>
-  inviteStaffUseCase(db, { accountId, actor, body: { name, email, commission_rate: commissionRate } }, repos);
+const inviteStaff = (db, { accountId, actor, name, email, commissionRate, appUrl }, repos) =>
+  inviteStaffUseCase(db, { accountId, actor, appUrl, body: { name, email, commission_rate: commissionRate } }, repos);
 
 
 // T08 — validación
@@ -147,4 +147,19 @@ test('un actor staff con body inválido recibe 403, no 400 (el rol se evalúa pr
     () => inviteStaffUseCase(db, { accountId: 'acc-1', actor: { id: 'stf-1', role: 'staff' }, body: undefined }, {}),
     { status: 403 },
   );
+});
+
+// spec 009 RF-21 — el correo y la respuesta llevan el enlace completo, no el token pelado.
+test('envía y devuelve el enlace de activación armado con appUrl', async () => {
+  let sent;
+  const repos = makeRepos({ email: { sendInvitation: async (m) => { sent = m; } } });
+  const { invitation_link: link } = await inviteStaff(db, base, repos);
+  assert.match(link, /^https:\/\/app\.test\/activar\?token=[^&]+$/);
+  assert.deepEqual(sent, { to: 'ana@test.com', link });
+});
+
+test('un email que reactiva o reenvía también devuelve un enlace nuevo', async () => {
+  const repos = makeRepos({ users: { findByEmail: async () => ({ id: 'usr-1', status: 'pendiente', account_id: 'acc-1' }) } });
+  const { invitation_link: link } = await inviteStaff(db, base, repos);
+  assert.match(link, /^https:\/\/app\.test\/activar\?token=/);
 });

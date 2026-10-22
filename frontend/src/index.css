@@ -501,3 +501,109 @@ p { margin: 0; }
 }
 .pub-link-box button { align-self: flex-start; }
 .pub-warning { color: var(--text-h); font-size: 0.9375rem; }
+
+/* ── Gestión del negocio (spec 009) ────────────────────────────────────────── */
+/* Reusa las clases .pub-* para botones, formularios y avisos; acá solo lo propio de estas pantallas. Mobile-first, 360 px. */
+
+.app-nav {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+.app-nav-links { display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; flex: 1; }
+.app-nav-links a {
+  padding: 0.375rem 0.625rem;
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+.app-nav-links a:hover { color: var(--text-h); background: var(--bg-subtle); }
+.app-nav-links a[aria-current="page"] { color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+.app-nav a:focus-visible,
+.app-nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.mgmt { max-width: 720px; }
+.mgmt section { display: flex; flex-direction: column; gap: 0.75rem; }
+.mgmt select {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+}
+.mgmt select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mgmt-filter { display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.875rem; font-weight: 500; color: var(--text-h); max-width: 16rem; }
+
+.mgmt-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+.mgmt-row--inactive { opacity: 0.7; }
+.mgmt-row-main { display: flex; flex-direction: column; gap: 0.125rem; }
+.mgmt-row-main strong { color: var(--text-h); }
+.mgmt-row-main span { font-size: 0.875rem; }
+.mgmt-row .pub-actions { margin-top: 0; }
+
+.mgmt-badge { font-weight: 600; }
+.mgmt-badge--activo { color: #10b981; }
+.mgmt-badge--pendiente { color: #d97706; }
+.mgmt-badge--inactivo { color: var(--text); }
+
+.mgmt-link-button {
+  display: inline-block;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-weight: 600;
+  text-decoration: none;
+}
+.mgmt-link-button:hover { background: var(--bg-subtle); }
+.mgmt-link-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.mgmt-invitation { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
+
+.mgmt-schedule { display: flex; flex-direction: column; gap: 0.75rem; }
+.mgmt-day {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+.mgmt-day h3 { font-size: 1rem; }
+.mgmt-day > button { align-self: flex-start; }
+.mgmt-span { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.mgmt .mgmt-span input { width: auto; flex: 1 1 6.5rem; min-width: 0; }
+
+.mgmt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+}
+.mgmt-dialog {
+  width: 100%;
+  max-width: 28rem;
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}

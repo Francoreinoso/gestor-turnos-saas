@@ -80,3 +80,17 @@ test('el README real no miente', () => {
   assert.deepEqual(problems, []);
   assert.ok(readme.includes(DEMO_ACCOUNT_ID), 'el README debe incluir el id fijo de la cuenta demo');
 });
+
+// spec 009 criterio 3: servicios, equipo y horarios ya tienen pantalla y el README deja de decir "solo por API".
+test('el README real dice que servicios, equipo y horarios tienen pantalla', () => {
+  const readme = read('README.md');
+  for (const row of ['Editar servicios y precios', 'Gestionar trabajadores', 'Editar el horario semanal']) {
+    const line = readme.split('\n').find(l => l.startsWith(`| ${row}`));
+    assert.ok(line, `falta la fila "${row}" en la tabla de roles`);
+    assert.ok(line.trimEnd().endsWith('| Pantalla |'), `"${row}" debe figurar como Pantalla: ${line}`);
+  }
+  assert.ok(!/activación de un trabajador invitado no tiene pantalla/i.test(readme), 'la activación ya tiene pantalla');
+  assert.ok(!/administrar servicios, trabajadores, horarios/i.test(readme), 'el límite de "solo por API" ya no incluye servicios, trabajadores ni horarios');
+  assert.ok(readme.includes('APP_URL'), 'APP_URL debe estar documentada');
+  assert.ok(readme.includes('/activar'), 'el README debe explicar el enlace de activación');
+});

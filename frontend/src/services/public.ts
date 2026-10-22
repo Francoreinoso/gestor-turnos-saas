@@ -1,6 +1,7 @@
 import { apiPublic } from './api';
 import type { PublicAccount, PublicAppointment, Slot, BookingResult } from '../domain/publicTypes';
 import type { BookingPayload } from '../domain/booking';
+import type { StaffMember } from '../domain/types';
 
 // spec 005 RF-30: el token de gestión se recibe por argumento y viaja solo en la query de cada llamada;
 // este módulo no lo guarda en ningún lado.
@@ -25,4 +26,8 @@ export const publicService = {
 
   reschedule: (id: string, token: string, body: { scheduled_at: string; employee_id?: string }) =>
     apiPublic.patch<BookingResult>(withToken(`/public/appointments/${id}/reschedule`, token), body),
+
+  // spec 009 RF-23, RF-25: el trabajador invitado define su contraseña con el token del enlace; sin JWT del panel.
+  activateAccount: (token: string, password: string) =>
+    apiPublic.post<{ user: StaffMember }>('/public/staff-invitations/activate', { token, password }),
 };

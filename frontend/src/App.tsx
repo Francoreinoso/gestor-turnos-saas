@@ -5,6 +5,10 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import BookingPage from './pages/BookingPage';
 import ManagePage from './pages/ManagePage';
+import ServicesPage from './pages/ServicesPage';
+import StaffPage from './pages/StaffPage';
+import SchedulePage from './pages/SchedulePage';
+import ActivatePage from './pages/ActivatePage';
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -38,6 +42,13 @@ export default function App() {
           <Route path="/login"        element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/owner/agenda" element={<OwnerRoute><DashboardPage /></OwnerRoute>} />
           <Route path="/staff/agenda" element={<StaffRoute><DashboardPage /></StaffRoute>} />
+          {/* spec 009 RF-3: pantallas de gestión, con la misma guarda por rol que las agendas */}
+          <Route path="/owner/servicios" element={<OwnerRoute><ServicesPage /></OwnerRoute>} />
+          <Route path="/owner/equipo" element={<OwnerRoute><StaffPage /></OwnerRoute>} />
+          <Route path="/owner/equipo/:id/horario" element={<OwnerRoute><SchedulePage /></OwnerRoute>} />
+          <Route path="/staff/horario" element={<StaffRoute><SchedulePage /></StaffRoute>} />
+          {/* spec 009 RF-25: pública, con o sin sesión y sin redirigir por rol */}
+          <Route path="/activar" element={<ActivatePage />} />
           {/* spec 005 RF-32: públicas, con o sin sesión y sin redirigir por rol */}
           <Route path="/reservar/:accountId" element={<BookingPage />} />
           <Route path="/turno/:id"    element={<ManagePage />} />
