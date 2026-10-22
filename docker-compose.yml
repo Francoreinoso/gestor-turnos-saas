@@ -45,6 +45,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       # spec 009 RF-22: base de los enlaces de activación que el owner le entrega al trabajador.
       APP_URL: ${APP_URL:-http://localhost:5173}
+      # spec 011: opcionales; sin clave el asistente queda deshabilitado (503).
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ASSISTANT_MODEL: ${ASSISTANT_MODEL:-claude-sonnet-5-5}
       # spec 008 RF-19: hay un proxy de confianza (nginx) delante; Express toma la IP del cliente de X-Forwarded-For,
       # y los límites de uso (login, registro, /public/*) cuentan por persona y no por la IP de nginx.
       TRUST_PROXY: 1

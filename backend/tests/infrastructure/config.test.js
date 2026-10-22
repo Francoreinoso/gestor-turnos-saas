@@ -18,7 +18,10 @@ const rejects = (env, variable) => {
 
 test('configuración mínima válida y valores por defecto', () => {
   const cfg = loadConfig({ JWT_SECRET: 'algo' });
-  assert.deepEqual(cfg, { nodeEnv: 'development', port: 3000, trustProxy: 0, jwtSecret: 'algo', appUrl: 'http://localhost:5173' });
+  assert.deepEqual(cfg, {
+    nodeEnv: 'development', port: 3000, trustProxy: 0, jwtSecret: 'algo', appUrl: 'http://localhost:5173',
+    anthropicApiKey: null, assistantModel: 'claude-sonnet-5-5',
+  });
 });
 
 test('JWT_SECRET ausente, vacío o de solo espacios → no arranca — RF-14', () => {
@@ -90,4 +93,39 @@ test('APP_URL que no es una URL http(s) → no arranca, y el mensaje no imprime 
 test('producción: APP_URL debe ser https://', () => {
   rejects(prod({ APP_URL: 'http://app.test' }), 'APP_URL');
   assert.equal(loadConfig(prod({ APP_URL: 'https://app.test' })).appUrl, 'https://app.test');
+});
+
+// spec 011 RNF-2 — el asistente es opcional: sin clave la app arranca y /assistant/* queda no disponible.
+test('ANTHROPIC_API_KEY: ausente o vacía = null (asistente deshabilitado); con valor se recorta — RNF-2', () => {
+  assert.equal(loadConfig(dev()).anthropicApiKey, null);
+  assert.equal(loadConfig(dev({ ANTHROPIC_API_KEY: '' })).anthropicApiKey, null);
+  assert.equal(loadConfig(dev({ ANTHROPIC_API_KEY: '   ' })).anthropicApiKey, null);
+  assert.equal(loadConfig(dev({ ANTHROPIC_API_KEY: ' clave-de-prueba ' })).anthropicApiKey, 'clave-de-prueba');
+  assert.equal(loadConfig(prod()).anthropicApiKey, null, 'tampoco es obligatoria en producción');
+});
+
+test('ASSISTANT_MODEL: default claude-sonnet-5-5, valor propio, vacío = default, formato inválido → no arranca', () => {
+  assert.equal(loadConfig(dev()).assistantModel, 'claude-sonnet-5-5');
+  assert.equal(loadConfig(dev({ ASSISTANT_MODEL: '' })).assistantModel, 'claude-sonnet-5-5');
+  assert.equal(loadConfig(dev({ ASSISTANT_MODEL: 'claude-haiku-5-5' })).assistantModel, 'claude-haiku-5-5');
+  for (const bad of ['con espacios', 'a/b', 'x'.repeat(101)]) rejects(dev({ ASSISTANT_MODEL: bad }), 'ASSISTANT_MODEL');
+});
+
+test('ninguna falla de configuración imprime la clave de Anthropic — regla: las claves no se publican', () => {
+  const key = 'sk-ant-CLAVE-QUE-NO-DEBE-APARECER';
+  for (const env of [dev({ ANTHROPIC_API_KEY: key, PORT: '0' }), dev({ ANTHROPIC_API_KEY: key, ASSISTANT_MODEL: 'mal modelo' }), prod({ ANTHROPIC_API_KEY: key, JWT_SECRET: 'corto' })]) {
+    try { loadConfig(env); assert.fail('debía lanzar'); } catch (err) {
+      assert.ok(!String(err.message).includes(key), err.message);
+      assert.ok(!String(err.stack).includes(key));
+    }
+  }
+});
+
+test('los .env.example no traen claves reales de Anthropic: ANTHROPIC_API_KEY queda vacía', () => {
+  for (const file of ['../../../.env.example', '../../.env.example']) {
+    const text = readFileSync(new URL(file, import.meta.url), 'utf8');
+    assert.ok(!/sk-ant-/i.test(text), `${file}: no debe contener una clave`);
+    const line = /^ANTHROPIC_API_KEY=(.*)$/m.exec(text);
+    if (line) assert.equal(line[1].trim(), '', `${file}: ANTHROPIC_API_KEY debe ir vacía`);
+  }
 });

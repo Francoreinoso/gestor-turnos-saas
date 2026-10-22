@@ -44,6 +44,21 @@ const parseAppUrl = (raw, nodeEnv) => {
   return raw;
 };
 
+export const DEFAULT_ASSISTANT_MODEL = 'claude-sonnet-5-5';
+const MODEL_PATTERN = /^[A-Za-z0-9._:-]{1,100}$/;
+
+// spec 011: la clave es opcional (sin ella el asistente queda deshabilitado) y nunca aparece en un mensaje de error.
+const parseAnthropicApiKey = (raw) => {
+  const key = (raw ?? '').trim();
+  return key === '' ? null : key;
+};
+
+const parseAssistantModel = (raw) => {
+  if (raw === undefined || raw === '') return DEFAULT_ASSISTANT_MODEL;
+  if (!MODEL_PATTERN.test(raw)) throw new ConfigError('ASSISTANT_MODEL debe ser un identificador de modelo válido');
+  return raw;
+};
+
 export const loadConfig = (env) => {
   const nodeEnv = env.NODE_ENV || 'development';
   const jwtSecret = env.JWT_SECRET ?? '';
@@ -64,5 +79,7 @@ export const loadConfig = (env) => {
     trustProxy: parseNonNegativeInt('TRUST_PROXY', env.TRUST_PROXY, { fallback: 0 }),
     jwtSecret,
     appUrl: parseAppUrl(env.APP_URL, nodeEnv),
+    anthropicApiKey: parseAnthropicApiKey(env.ANTHROPIC_API_KEY),
+    assistantModel: parseAssistantModel(env.ASSISTANT_MODEL),
   };
 };
