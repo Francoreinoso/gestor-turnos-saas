@@ -2,16 +2,15 @@ import express from 'express';
 import { db } from '../../db/client.js';
 import * as repos from '../../db/repositories/index.js';
 import { listAvailableSlots } from '../../../application/listAvailableSlots.js';
+import { parseInput } from '../../../domain/validation.js';
+import { slotsQuery } from '../../../domain/schemas/availability.js';
 
 const router = express.Router();
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
-const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
 router.get('/:business_id', wrap(async (req, res) => {
   const { business_id } = req.params;
-  const { employee_id, service_id, date_from, date_to } = req.query;
-
-  if (!date_from || !date_to || !service_id) throw httpErr(400, 'date_from, date_to, service_id required');
+  const { employee_id, service_id, date_from, date_to } = parseInput(slotsQuery, req.query);
 
   const slots = await listAvailableSlots(db, {
     businessId: business_id,

@@ -1,22 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { timeToMinutes, formatTime, normalizeWindows } from '../../src/domain/availabilityWindows.js';
+import { formatTime, normalizeWindows } from '../../src/domain/availabilityWindows.js';
 
 const w = (day_of_week, start_time, end_time) => ({ day_of_week, start_time, end_time });
 
 // T01 — horas y formato (RF-2, RF-7)
-test('timeToMinutes: HH:MM válido', () => {
-  assert.equal(timeToMinutes('09:00'), 540);
-  assert.equal(timeToMinutes('00:00'), 0);
-  assert.equal(timeToMinutes('23:59'), 1439);
-});
-
-test('timeToMinutes: formato inválido → 422', () => {
-  for (const bad of ['24:00', '9:00', '09:00:00', '09:60', 'abc', '', null, 900]) {
-    assert.throws(() => timeToMinutes(bad), { status: 422 }, String(bad)); // RF-7
-  }
-});
-
 test('formatTime: normaliza HH:MM:SS de la base a HH:MM', () => {
   assert.equal(formatTime('09:00:00'), '09:00');
   assert.equal(formatTime('09:00'), '09:00');

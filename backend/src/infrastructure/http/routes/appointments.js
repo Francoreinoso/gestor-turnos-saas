@@ -9,6 +9,8 @@ import { cancelAppointment } from '../../../application/cancelAppointment.js';
 import { cancelBlock } from '../../../application/cancelBlock.js';
 import { listAppointments } from '../../../application/listAppointments.js';
 import { getAppointment } from '../../../application/getAppointment.js';
+import { parseInput } from '../../../domain/validation.js';
+import { panelAppointmentBody, blockBody } from '../../../domain/schemas/appointments.js';
 
 const router = express.Router();
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
@@ -19,7 +21,7 @@ const actorOf = (req) => ({ id: req.user.id, role: req.user.role });
 // spec 001 RF-1..RF-18 — creación desde el panel autenticado.
 // (El booking público vive en POST /public/bookings.)
 router.post('/', auth, wrap(async (req, res) => {
-  const { service_id, scheduled_at, client_id, client, employee_id, notes } = req.body;
+  const { service_id, scheduled_at, client_id, client, employee_id, notes } = parseInput(panelAppointmentBody, req.body);
   const result = await createAppointmentFromPanel(db, {
     accountId: req.user.account_id,
     actor: actorOf(req),
@@ -65,12 +67,9 @@ router.patch('/:id', auth, wrap(async (req, res) => {
 }));
 
 router.post('/block', auth, wrap(async (req, res) => {
-  let { assigned_user_id, scheduled_at, scheduled_until, notes } = req.body;
-  if (!scheduled_at || !scheduled_until) throw httpErr(400, 'missing_fields');
-
+  let { assigned_user_id, scheduled_at, scheduled_until, notes } = parseInput(blockBody, req.body);
   const startsAt = new Date(scheduled_at);
   const endsAt = new Date(scheduled_until);
-  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) throw httpErr(400, 'invalid_date');
 
   // Staff can only block their own slots; owner with null creates a whole-business block
   if (req.user.role === 'staff') assigned_user_id = req.user.id;

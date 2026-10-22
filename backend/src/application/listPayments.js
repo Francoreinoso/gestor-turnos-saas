@@ -1,9 +1,12 @@
 import { resolvePeriod } from '../domain/paymentsPeriod.js';
+import { parseInput } from '../domain/validation.js';
+import { paymentsQuery } from '../domain/schemas/payments.js';
 
 const LIST_LIMIT = 500; // mismo valor que el listado de turnos (listAppointments.js RF-41)
 
 // spec 003 RF-8..RF-10 — listado detallado de pagos del período.
-export const listPayments = async (db, { accountId, actor, query = {}, now }, repos) => {
+export const listPayments = async (db, { accountId, actor, query: rawQuery = {}, now }, repos) => {
+  const query = parseInput(paymentsQuery, rawQuery);
   const { from, to } = resolvePeriod({
     preset: query.period,
     dateFrom: query.date_from,

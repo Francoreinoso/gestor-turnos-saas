@@ -157,6 +157,7 @@ La especificación completa está en el [documento de diseño §4](docs/diseno-g
 - **Aislamiento por cuenta con 404 en vez de 403.** Un recurso de otro negocio o de otro profesional no se distingue de uno inexistente. ([§3.10](docs/diseno-gestor-turnos.md))
 - **Baja lógica.** Los servicios se desactivan y los turnos se cancelan; no se borran, para conservar el historial y los pagos. ([§3.5](docs/diseno-gestor-turnos.md))
 - **Transacciones.** Cambiar un precio con su historial, reprogramar o completar un turno con su pago ocurre todo o nada. ([§3.4](docs/diseno-gestor-turnos.md), [§3.6](docs/diseno-gestor-turnos.md))
+- **Validación con Zod, en un solo lugar.** Cada endpoint declara su entrada con un esquema puro de `domain/schemas/`; el primer fallo se traduce al mismo `{ error: <código> }` de siempre y las reglas de negocio quedan fuera. ([§4](docs/diseno-gestor-turnos.md), [spec 007](docs/specs/007-validacion-zod/spec.md))
 - **Clean architecture.** `domain` sin I/O, `application` orquesta y `infrastructure` es reemplazable; el seed usa los mismos casos de uso que la API, así los datos demo respetan las mismas reglas. ([§5](docs/diseno-gestor-turnos.md))
 
 ## Tests

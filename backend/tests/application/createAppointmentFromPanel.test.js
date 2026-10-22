@@ -138,24 +138,6 @@ test('RF-3: datos de cliente nuevo → find-or-create y se usa el id devuelto', 
   assert.equal(forwarded.account_id, 'acc-1');
 });
 
-test('RF-4: falta servicio / falta cliente → 400', async () => {
-  await assert.rejects(
-    () => createAppointmentFromPanel(db, { accountId: 'acc-1', actor: owner, clientId: 'cli-1', scheduledAt: FUTURE }, makeRepos()),
-    { message: 'missing_fields', status: 400 },
-  );
-  await assert.rejects(
-    () => createAppointmentFromPanel(db, { accountId: 'acc-1', actor: owner, serviceId: 'svc-1', scheduledAt: FUTURE }, makeRepos()),
-    { message: 'missing_fields', status: 400 },
-  );
-});
-
-test('RF-15: fecha de inicio no ISO válida → 400', async () => {
-  await assert.rejects(
-    () => createAppointmentFromPanel(db, { ...base, actor: owner, employeeId: 'usr-9', scheduledAt: 'no-es-fecha' }, makeRepos()),
-    { message: 'invalid_date', status: 400 },
-  );
-});
-
 test('RF-14: profesional inexistente o de otra cuenta → 404', async () => {
   const otra = makeRepos({ users: { findById: async () => ({ id: 'usr-9', account_id: 'otra' }) } });
   await assert.rejects(

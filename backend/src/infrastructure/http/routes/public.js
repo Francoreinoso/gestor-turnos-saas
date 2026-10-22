@@ -8,6 +8,8 @@ import { rescheduleAppointment } from '../../../application/rescheduleAppointmen
 import { getPublicAccount } from '../../../application/getPublicAccount.js';
 import { getPublicAppointment } from '../../../application/getPublicAppointment.js';
 import { activateStaffAccount } from '../../../application/activateStaffAccount.js';
+import { parseInput } from '../../../domain/validation.js';
+import { publicBookingBody, rescheduleBody, activateBody } from '../../../domain/schemas/public.js';
 
 const router = express.Router();
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
@@ -33,9 +35,7 @@ router.get('/appointments/:id', readLimiter, publicAuth, wrap(async (req, res) =
 // Booking público — sin JWT (el cliente aún no tiene token).
 // spec 001 D-P2: se movió acá desde POST /appointments para liberar esa ruta al panel.
 router.post('/bookings', strictLimiter, wrap(async (req, res) => {
-  const { account_id, service_id, scheduled_at, client_id, client, employee_id, notes } = req.body;
-  if (!account_id || !service_id || !scheduled_at) throw httpErr(400, 'missing_fields');
-  if (!client_id && !client) throw httpErr(400, 'client_required');
+  const { account_id, service_id, scheduled_at, client_id, client, employee_id, notes } = parseInput(publicBookingBody, req.body);
 
   const result = await db.transaction(async (tx) =>
     createAppointment(tx, {
@@ -56,8 +56,7 @@ router.patch('/appointments/:id/cancel', strictLimiter, publicAuth, wrap(async (
 }));
 
 router.patch('/appointments/:id/reschedule', strictLimiter, publicAuth, wrap(async (req, res) => {
-  const { service_id, scheduled_at, employee_id, notes } = req.body;
-  if (!scheduled_at) throw httpErr(400, 'missing_fields');
+  const { service_id, scheduled_at, employee_id, notes } = parseInput(rescheduleBody, req.body);
 
   const old = await repos.appointments.findById(db, req.params.id);
   if (!old) throw httpErr(404, 'not_found');
@@ -69,8 +68,7 @@ router.patch('/appointments/:id/reschedule', strictLimiter, publicAuth, wrap(asy
 // spec 002 RF-10, RF-11 — activar la cuenta de un trabajador invitado.
 // Sin publicAuth: el token se valida dentro del use case (D-P7), mismo patrón que /bookings.
 router.post('/staff-invitations/activate', strictLimiter, wrap(async (req, res) => {
-  const { token, password } = req.body;
-  if (!token || !password) throw httpErr(400, 'missing_fields');
+  const { token, password } = parseInput(activateBody, req.body);
 
   const result = await activateStaffAccount(db, { token, password }, repos);
   res.json(result);

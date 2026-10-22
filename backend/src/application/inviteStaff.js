@@ -1,16 +1,18 @@
 import { normalizeEmail } from '../domain/client.js';
 import { generateAccessToken } from '../domain/token.js';
-import { assertValidCommissionRate } from '../domain/staffEdit.js';
+import { parseInput } from '../domain/validation.js';
+import { inviteStaffBody } from '../domain/schemas/staff.js';
 import { decideInviteAction } from '../domain/staffInvite.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 const TOKEN_TTL_MS = 72 * 60 * 60 * 1000; // RF-9
 
 // spec 002 — invitar (alta) de un trabajador: RF-1..RF-9, RF-13..RF-15.
-export const inviteStaff = async (db, { accountId, actor, name, email, commissionRate }, repos) => {
+export const inviteStaff = async (db, { accountId, actor, ...input }, repos) => {
   if (actor.role === 'staff') throw httpErr(403, 'forbidden'); // RF-14
-  if (!name || !email) throw httpErr(400, 'missing_fields'); // RF-5
-  assertValidCommissionRate(commissionRate); // RF-4
+  const { name, email, commission_rate: commissionRate } = parseInput(inviteStaffBody, {
+    name: input.name, email: input.email, commission_rate: input.commissionRate,
+  }); // RF-5, RF-4
 
   const normalized = normalizeEmail(email);
   const existingUser = await repos.users.findByEmail(db, normalized);

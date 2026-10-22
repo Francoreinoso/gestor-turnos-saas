@@ -1,8 +1,11 @@
 import { resolvePeriod } from '../domain/paymentsPeriod.js';
+import { parseInput } from '../domain/validation.js';
+import { paymentsQuery } from '../domain/schemas/payments.js';
 
 // spec 003 RF-1..RF-7 — resumen financiero agregado, con desglose por
 // profesional para el owner (siempre en la misma respuesta, D1 del spec).
-export const getPaymentsSummary = async (db, { accountId, actor, query = {}, now }, repos) => {
+export const getPaymentsSummary = async (db, { accountId, actor, query: rawQuery = {}, now }, repos) => {
+  const query = parseInput(paymentsQuery, rawQuery);
   const { from, to } = resolvePeriod({
     preset: query.period,
     dateFrom: query.date_from,

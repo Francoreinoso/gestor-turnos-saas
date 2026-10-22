@@ -4,22 +4,18 @@ import { db } from '../../db/client.js';
 import * as repos from '../../db/repositories/index.js';
 import { users } from '../../../../db/schema.js';
 import auth from '../middleware/auth.js';
+import { parseInput } from '../../../domain/validation.js';
+import { commissionBody } from '../../../domain/schemas/accounts.js';
 
 const router = express.Router();
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
-function validateRate(rate) {
-  if (rate === null) return true;
-  return typeof rate === 'number' && rate >= 0 && rate <= 1;
-}
-
 // PATCH /accounts/commission — set default commission for this account (owner only)
 router.patch('/commission', auth, wrap(async (req, res) => {
   if (req.user.role !== 'owner') throw httpErr(403, 'forbidden');
 
-  const { commission_rate } = req.body;
-  if (!validateRate(commission_rate)) throw httpErr(400, 'invalid_commission_rate');
+  const { commission_rate } = parseInput(commissionBody, req.body);
 
   const updated = await repos.accounts.updateCommission(db, req.user.account_id, commission_rate);
   res.json(updated);
@@ -29,8 +25,7 @@ router.patch('/commission', auth, wrap(async (req, res) => {
 router.patch('/users/:id/commission', auth, wrap(async (req, res) => {
   if (req.user.role !== 'owner') throw httpErr(403, 'forbidden');
 
-  const { commission_rate } = req.body;
-  if (!validateRate(commission_rate)) throw httpErr(400, 'invalid_commission_rate');
+  const { commission_rate } = parseInput(commissionBody, req.body);
 
   // Verify user belongs to this account (404 on miss — no info leak)
   const user = await db.query.users.findFirst({

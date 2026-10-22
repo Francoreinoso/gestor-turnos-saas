@@ -1,4 +1,5 @@
-import { assertEditablePayload } from '../domain/appointmentEdit.js';
+import { parseInput } from '../domain/validation.js';
+import { editAppointmentBody } from '../domain/schemas/appointments.js';
 import { computeEndsAt } from '../domain/appointmentScheduling.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
@@ -6,7 +7,7 @@ const isOverlap = (err) => (err.cause?.message ?? err.message) === 'appointment_
 
 // spec 001 — edición in-place de un turno agendado (RF-19..RF-29, RF-33).
 export const editAppointment = async (db, { id, accountId, actor, body }, repos) => {
-  const changes = assertEditablePayload(body); // RF-21 / RF-22
+  const changes = parseInput(editAppointmentBody, body); // RF-21 / RF-22
 
   const appointment = await repos.appointments.findVisible(db, { id, accountId });
   if (!appointment) throw httpErr(404, 'not_found'); // RF-34

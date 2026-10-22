@@ -1,3 +1,6 @@
+import { parseInput } from '../domain/validation.js';
+import { listAppointmentsQuery } from '../domain/schemas/appointments.js';
+
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
 const LIST_LIMIT = 500; // RF-41
@@ -10,7 +13,8 @@ const parseDate = (value) => {
 };
 
 // spec 001 — listado de turnos de la cuenta con filtros (RF-36..RF-42).
-export const listAppointments = async (db, { accountId, actor, query = {} }, repos) => {
+export const listAppointments = async (db, { accountId, actor, query: rawQuery = {} }, repos) => {
+  const query = parseInput(listAppointmentsQuery, rawQuery);
   const status = query.status ?? query.type; // RF-37: `type` es alias de `status`
   const dateFrom = parseDate(query.date_from);
   const dateTo = parseDate(query.date_to);

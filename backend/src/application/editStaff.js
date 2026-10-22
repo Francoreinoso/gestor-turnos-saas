@@ -1,6 +1,7 @@
 import { normalizeEmail } from '../domain/client.js';
 import { generateAccessToken } from '../domain/token.js';
-import { assertOwnerEditablePayload, assertValidCommissionRate } from '../domain/staffEdit.js';
+import { parseInput } from '../domain/validation.js';
+import { editStaffBody } from '../domain/schemas/staff.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 const TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
@@ -9,8 +10,7 @@ const TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
 export const editStaff = async (db, { id, accountId, actor, body }, repos) => {
   if (actor.role === 'staff') throw httpErr(404, 'not_found'); // RF-24: la edición de otro trabajador está fuera de su alcance
 
-  const changes = assertOwnerEditablePayload(body); // RF-23
-  if ('commission_rate' in changes) assertValidCommissionRate(changes.commission_rate); // RF-4
+  const changes = parseInput(editStaffBody, body); // RF-23, RF-4
 
   const user = await repos.users.findVisible(db, { id, accountId });
   if (!user) throw httpErr(404, 'not_found'); // RF-34

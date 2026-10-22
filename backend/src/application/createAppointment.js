@@ -17,7 +17,6 @@ export const createAppointment = async (db, { accountId, serviceId, scheduledAt,
 
   let resolvedClientId = clientId;
   if (!resolvedClientId) {
-    if (!clientData) throw httpErr(400, 'client_required');
     if (clientData.email) clientData.email = normalizeEmail(clientData.email);
 
     const client = await repos.clients.findOrCreate(

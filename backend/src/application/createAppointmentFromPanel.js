@@ -14,10 +14,8 @@ export const createAppointmentFromPanel = async (
   { accountId, actor, serviceId, scheduledAt, clientId, clientData, employeeId, notes },
   repos,
 ) => {
-  // RF-4 / RF-15: payload mínimo y fecha válida.
-  if (!serviceId || !scheduledAt || (!clientId && !clientData)) throw httpErr(400, 'missing_fields');
+  // RF-4 / RF-15: la forma del payload (presencia, UUID, fecha ISO) la valida el esquema en la ruta.
   const startsAt = new Date(scheduledAt);
-  if (Number.isNaN(startsAt.getTime())) throw httpErr(400, 'invalid_date');
 
   // RF-11 / RF-2 / RF-12: servicio activo de la cuenta y cálculo del fin.
   const service = await repos.services.findActive(db, serviceId, accountId);

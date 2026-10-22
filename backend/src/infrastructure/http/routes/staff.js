@@ -11,6 +11,9 @@ import { getStaff } from '../../../application/getStaff.js';
 import { getStaffAvailability } from '../../../application/getStaffAvailability.js';
 import { replaceStaffAvailability } from '../../../application/replaceStaffAvailability.js';
 
+import { parseInput } from '../../../domain/validation.js';
+import { listStaffQuery } from '../../../domain/schemas/staff.js';
+
 const router = express.Router();
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 
@@ -34,7 +37,7 @@ router.get('/', auth, wrap(async (req, res) => {
   const result = await listStaff(db, {
     accountId: req.user.account_id,
     actor: actorOf(req),
-    status: req.query.status,
+    status: parseInput(listStaffQuery, req.query).status,
   }, repos);
   res.json(result);
 }));

@@ -252,6 +252,17 @@ Diferencias funcionales `owner` vs `staff`:
 
 `GET /health` (fuera de `/public`, sin autenticación ni limitador) responde `200 { "status": "ok" }` si la base contesta y `503 { "status": "unavailable" }` si no, sin exponer detalles. Lo usan los healthchecks de Docker Compose y la prueba de humo de la CI.
 
+### Validación de entrada (spec 007)
+
+La forma y el formato de body y query se declaran con esquemas [Zod](https://zod.dev) en `backend/src/domain/schemas/` (uno por entrada de endpoint, sin I/O). `parseInput(schema, data)` (`domain/validation.js`) aplica el esquema, toma **solo el primer fallo** (determinista, en el orden de los campos) y lanza el mismo `httpErr` que ya consume `errorHandler`; nunca se expone el mensaje ni el árbol de errores de la librería. Cada regla declara su código y su estado junto a la regla (`rule(code, status)`), porque un mismo código cambia de estado según el endpoint (`invalid_commission_rate`: 400 en `/accounts`, 422 en `/staff`).
+
+- **Orden de invocación:** `parseInput` ocupa el lugar exacto de la validación manual que reemplaza, nunca antes. Por eso en `PUT /staff/:id/availability` corre dentro del caso de uso, tras alcance (404) y estado (422), y en `PATCH /services/:id` o `PATCH /clients/:id`, tras el 404.
+- **Cuerpo que no es objeto** (`[]`, ausente) → 400 `invalid_body`. Los campos desconocidos se descartan sin error, salvo en `PATCH /staff/:id`, `PATCH /me` y `PATCH /appointments/:id`, que conservan `invalid_field` / `empty_update`.
+- **Fuera de Zod:** `paymentsPeriod` (`invalid_period`, `ambiguous_period_filter`), `appointment_in_past` y `invalid_scheduled_at` del booking público, solapamientos, alcance por rol y transiciones de estado. Los params no pasan por Zod: un UUID inválido sigue siendo 404.
+- **`express.json()`** rechaza un JSON roto, `null` o un string suelto antes de llegar a Zod, con el mensaje de `body-parser`.
+
+Detalle y decisiones: [spec 007](specs/007-validacion-zod/spec.md).
+
 ## 5. Setup técnico
 
 - **ORM:** Drizzle, no Sequelize — el proyecto depende de lógica que vive en la base de datos (trigger de solapamiento, `CHECK` condicional, índice único funcional sobre `lower(email)`), y las migraciones `.sql` reales de Drizzle permiten escribir esa lógica en el mismo archivo/lenguaje, sin mezclar SQL crudo dentro de wrappers JS como exigiría Sequelize.
