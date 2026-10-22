@@ -55,3 +55,59 @@ test('RF-32: sin sesión, /reservar/:id también es accesible', async () => {
   expect(await screen.findByText(/negocio no encontrado/i)).toBeInTheDocument();
   expect(window.location.pathname).toBe('/reservar/acc-1');
 });
+
+// ─── spec 009 RF-3, RF-25 · guardas de las pantallas de gestión ──────────────
+
+const staffJwt = `h.${btoa(JSON.stringify({ id: 'u2', account_id: 'acc-1', role: 'staff' }))}.s`;
+
+test('RF-3: un staff que abre /owner/equipo vuelve a su agenda', async () => {
+  localStorage.setItem('token', staffJwt);
+  window.history.pushState({}, '', '/owner/equipo');
+  fetchMock.mockImplementation(async () => json(200, []));
+  render(<App />);
+  await screen.findByText(/sin turnos para este día/i);
+  expect(window.location.pathname).toBe('/staff/agenda');
+});
+
+test('RF-3: un owner que abre /staff/horario vuelve a su agenda', async () => {
+  window.history.pushState({}, '', '/staff/horario');
+  fetchMock.mockImplementation(async () => json(200, []));
+  render(<App />);
+  await screen.findByText(/sin turnos para este día/i);
+  expect(window.location.pathname).toBe('/owner/agenda');
+});
+
+test('RF-3: sin sesión, /owner/servicios lleva a /login', async () => {
+  localStorage.clear();
+  window.history.pushState({}, '', '/owner/servicios');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: /iniciar sesión/i })).toBeInTheDocument();
+  expect(window.location.pathname).toBe('/login');
+});
+
+test('RF-3: el owner abre /owner/servicios y /owner/equipo', async () => {
+  fetchMock.mockImplementation(async (url: string) => json(200, String(url).includes('/staff') ? { staff: [] } : []));
+  window.history.pushState({}, '', '/owner/servicios');
+  const { unmount } = render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Servicios' })).toBeInTheDocument();
+  unmount();
+
+  window.history.pushState({}, '', '/owner/equipo');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Equipo' })).toBeInTheDocument();
+});
+
+test('RF-25: /activar abre con sesión de owner, sin redirigir ni cerrar la sesión', async () => {
+  window.history.pushState({}, '', '/activar?token=tok');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: /activa tu cuenta/i })).toBeInTheDocument();
+  expect(window.location.pathname).toBe('/activar');
+  expect(localStorage.getItem('token')).toBe(ownerJwt);
+});
+
+test('RF-25: /activar abre sin sesión', async () => {
+  localStorage.clear();
+  window.history.pushState({}, '', '/activar?token=tok');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: /activa tu cuenta/i })).toBeInTheDocument();
+});

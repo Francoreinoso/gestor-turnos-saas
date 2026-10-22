@@ -16,6 +16,21 @@ export interface User {
   role: Role;
 }
 
+// spec 009 RF-1: vista de usuario que sale por HTTP (sin password_hash).
+export type StaffStatus = 'pendiente' | 'activo' | 'inactivo';
+
+export interface StaffMember extends User {
+  status: StaffStatus;
+  commission_rate: string | null;
+}
+
+// spec 009 RF-21: invitar o reenviar devuelve además el enlace de activación (solo al owner).
+export interface InvitationResult {
+  user: StaffMember;
+  invitation_link: string;
+  action?: 'create' | 'reactivate' | 'resend';
+}
+
 export interface Client {
   id: string;
   account_id: string;

@@ -17,7 +17,7 @@ const makeRepos = (o = {}) => ({
 
 const db = { transaction: async (fn) => fn(db) };
 const owner = { id: 'own-1', role: 'owner' };
-const base = { id: 'usr-1', accountId: 'acc-1', actor: owner };
+const base = { id: 'usr-1', accountId: 'acc-1', actor: owner, appUrl: 'https://app.test' };
 
 test('staff que invoca → 403', async () => {
   const repos = makeRepos();
@@ -49,4 +49,13 @@ test('pendiente → invalida el token anterior antes de crear uno nuevo y envía
   const { user } = await resendStaffInvitation(db, base, repos);
   assert.equal(user.id, 'usr-1');
   assert.deepEqual(calls, ['invalidate', 'create', 'email']); // RF-12
+});
+
+// spec 009 RF-21
+test('envía y devuelve el enlace de activación, no el token pelado', async () => {
+  let sent;
+  const repos = makeRepos({ email: { sendInvitation: async (m) => { sent = m; } } });
+  const { invitation_link: link } = await resendStaffInvitation(db, base, repos);
+  assert.match(link, /^https:\/\/app\.test\/activar\?token=[^&]+$/);
+  assert.deepEqual(sent, { to: 'ana@test.com', link });
 });

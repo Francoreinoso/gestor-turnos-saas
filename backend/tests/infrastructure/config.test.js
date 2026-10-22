@@ -18,7 +18,7 @@ const rejects = (env, variable) => {
 
 test('configuración mínima válida y valores por defecto', () => {
   const cfg = loadConfig({ JWT_SECRET: 'algo' });
-  assert.deepEqual(cfg, { nodeEnv: 'development', port: 3000, trustProxy: 0, jwtSecret: 'algo' });
+  assert.deepEqual(cfg, { nodeEnv: 'development', port: 3000, trustProxy: 0, jwtSecret: 'algo', appUrl: 'http://localhost:5173' });
 });
 
 test('JWT_SECRET ausente, vacío o de solo espacios → no arranca — RF-14', () => {
@@ -71,4 +71,23 @@ test('el mensaje de error nunca contiene el valor del secreto — RF-15', () => 
   for (const example of EXAMPLE_SECRETS) {
     try { loadConfig(prod({ JWT_SECRET: example })); assert.fail('debía lanzar'); } catch (err) { assert.ok(!String(err.message).includes(example), err.message); }
   }
+});
+
+// spec 009 RF-22 — APP_URL: base de los enlaces de activación.
+test('APP_URL: default, valor propio y vacío = default', () => {
+  assert.equal(loadConfig(dev()).appUrl, 'http://localhost:5173');
+  assert.equal(loadConfig(dev({ APP_URL: '' })).appUrl, 'http://localhost:5173');
+  assert.equal(loadConfig(dev({ APP_URL: 'https://app.test' })).appUrl, 'https://app.test');
+});
+
+test('APP_URL que no es una URL http(s) → no arranca, y el mensaje no imprime el valor', () => {
+  for (const bad of ['no-es-url', 'ftp://app.test', 'javascript:alert(1)', 'app.test']) {
+    rejects(dev({ APP_URL: bad }), 'APP_URL');
+    try { loadConfig(dev({ APP_URL: bad })); } catch (err) { assert.ok(!err.message.includes(bad), err.message); }
+  }
+});
+
+test('producción: APP_URL debe ser https://', () => {
+  rejects(prod({ APP_URL: 'http://app.test' }), 'APP_URL');
+  assert.equal(loadConfig(prod({ APP_URL: 'https://app.test' })).appUrl, 'https://app.test');
 });

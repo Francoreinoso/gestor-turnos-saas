@@ -46,3 +46,24 @@ test('RF-30: getAppointment, cancel y reschedule llevan el token solo en la quer
   expect(JSON.parse(call(2).init.body as string)).toEqual({ scheduled_at: 'x', employee_id: 'usr-1' });
   for (let i = 0; i < 3; i++) expect(String(call(i).init.body ?? '')).not.toContain('tok');
 });
+
+// spec 009 RF-23, RF-25
+test('activateAccount: POST público sin JWT y un 401/410 no cierra la sesión del panel', async () => {
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ error: 'token_expired' }), { status: 410, headers: { 'Content-Type': 'application/json' } }));
+  vi.stubGlobal('fetch', fetchMock);
+  localStorage.setItem('token', 'jwt-del-panel');
+  const logout = vi.fn();
+  window.addEventListener('auth:logout', logout);
+  try {
+    await expect(publicService.activateAccount('tok', 'clave12345')).rejects.toMatchObject({ status: 410, message: 'token_expired' });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/public/staff-invitations/activate');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ token: 'tok', password: 'clave12345' });
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+    expect(logout).not.toHaveBeenCalled();
+  } finally {
+    window.removeEventListener('auth:logout', logout);
+    vi.unstubAllGlobals();
+  }
+});

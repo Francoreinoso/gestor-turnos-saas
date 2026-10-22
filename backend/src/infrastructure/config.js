@@ -28,6 +28,22 @@ const parseNonNegativeInt = (name, raw, { min = 0, max = Number.MAX_SAFE_INTEGER
   return value;
 };
 
+export const DEFAULT_APP_URL = 'http://localhost:5173';
+
+// spec 009 RF-22: URL pública del frontend, base de los enlaces de activación. El mensaje nombra la variable, no el valor.
+const parseAppUrl = (raw, nodeEnv) => {
+  if (raw === undefined || raw === '') return DEFAULT_APP_URL;
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new ConfigError('APP_URL debe ser una URL http(s) válida');
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new ConfigError('APP_URL debe ser una URL http(s) válida');
+  if (nodeEnv === 'production' && url.protocol !== 'https:') throw new ConfigError('APP_URL debe usar https:// en producción');
+  return raw;
+};
+
 export const loadConfig = (env) => {
   const nodeEnv = env.NODE_ENV || 'development';
   const jwtSecret = env.JWT_SECRET ?? '';
@@ -47,5 +63,6 @@ export const loadConfig = (env) => {
     port: parseNonNegativeInt('PORT', env.PORT, { min: 1, max: 65535, fallback: 3000 }),
     trustProxy: parseNonNegativeInt('TRUST_PROXY', env.TRUST_PROXY, { fallback: 0 }),
     jwtSecret,
+    appUrl: parseAppUrl(env.APP_URL, nodeEnv),
   };
 };

@@ -89,6 +89,23 @@ jobs:
           grep -q '"services":\[{' account.json
       - name: Fallback de rutas del frontend
         run: curl --fail --silent --show-error "http://localhost:5173/reservar/$DEMO_ID" | grep -q '<div id="root">'
+      # spec 009 RF-21, RF-25: el owner crea un servicio e invita a un trabajador por API; el enlace de activación
+      # parte de APP_URL y la ruta /activar sirve la SPA (fallback de nginx).
+      - name: Gestión del negocio e invitación con enlace
+        run: |
+          API=http://localhost:5173/api
+          JSON='Content-Type: application/json'
+          TOKEN=$(curl --fail --silent --show-error "$API/auth/login" -H "$JSON" \
+            -d '{"email":"demo.owner@example.com","password":"demo1234"}' | jq -r .token)
+          test -n "$TOKEN" && test "$TOKEN" != null
+          AUTH="Authorization: Bearer $TOKEN"
+          curl --fail --silent --show-error "$API/services" -H "$AUTH" -H "$JSON" \
+            -d '{"name":"Smoke","duration_minutes":30,"price":"1000"}' | jq -e '.id'
+          LINK=$(curl --fail --silent --show-error "$API/staff" -H "$AUTH" -H "$JSON" \
+            -d "{\"name\":\"Smoke\",\"email\":\"smoke-$GITHUB_RUN_ID@example.com\"}" | jq -r .invitation_link)
+          echo "$LINK"
+          case "$LINK" in http://localhost:5173/activar?token=*) ;; *) echo "invitation_link inesperado"; exit 1 ;; esac
+          curl --fail --silent --show-error "http://localhost:5173/activar?token=x" | grep -q '<div id="root">'
       # spec 008 RF-17, RF-22: cabeceras de las respuestas estáticas del frontend (incluido un 404 y la ruta de respaldo).
       - name: Cabeceras de seguridad del frontend
         run: |

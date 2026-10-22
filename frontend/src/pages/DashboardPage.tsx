@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import AppNav from '../components/AppNav';
+import { formatTime } from '../domain/format';
 import { appointmentsService } from '../services/appointments';
 import type { Appointment, AppointmentStatus } from '../domain/types';
 
@@ -12,19 +13,10 @@ const STATUS_LABEL: Record<AppointmentStatus, string> = {
   cancelado:   'Cancelado',
 };
 
-const ROLE_LABEL: Record<string, string> = {
-  owner: 'Propietario',
-  staff: 'Staff',
-};
-
 function toDateRange(d: Date) {
   const from = new Date(d); from.setHours(0, 0, 0, 0);
   const to   = new Date(d); to.setHours(23, 59, 59, 999);
   return { date_from: from.toISOString(), date_to: to.toISOString() };
-}
-
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtDate(d: Date) {
@@ -32,7 +24,6 @@ function fmtDate(d: Date) {
 }
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
   const [date, setDate]       = useState(new Date());
   const [items, setItems]     = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,10 +43,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dash">
-      <header className="dash-header">
-        <span className="dash-role">{user ? ROLE_LABEL[user.role] : ''}</span>
-        <button onClick={logout} className="dash-logout">Salir</button>
-      </header>
+      <AppNav />
 
       <div className="dash-nav">
         <button onClick={() => shift(-1)} aria-label="Día anterior">‹</button>
@@ -77,8 +65,8 @@ export default function DashboardPage() {
         {items.map(a => (
           <article key={a.id} className={`apt apt--${a.status}`}>
             <div className="apt-time">
-              <span>{fmtTime(a.scheduled_at)}</span>
-              <span>{fmtTime(a.scheduled_until)}</span>
+              <span>{formatTime(a.scheduled_at)}</span>
+              <span>{formatTime(a.scheduled_until)}</span>
             </div>
             <div className="apt-body">
               <strong>{a.client?.name ?? '—'}</strong>
