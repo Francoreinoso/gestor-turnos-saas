@@ -22,7 +22,7 @@ const seedAppointment = async (accountId, userId, status, startsAt) => {
   const [client] = await db.insert(clients).values({ account_id: accountId, name: 'Cli', email: `c-${crypto.randomUUID()}@t.com` }).returning();
   const [service] = await db.insert(services).values({ account_id: accountId, name: 'Svc', duration_minutes: 60, price: '50.00' }).returning();
   return db.insert(appointments).values({
-    account_id: accountId, client_id: status === 'bloqueado' ? null : client.id, service_id: service.id, assigned_user_id: userId,
+    account_id: accountId, client_id: status === 'bloqueado' ? null : client.id, service_id: status === 'bloqueado' ? null : service.id, assigned_user_id: userId,
     scheduled_at: startsAt, scheduled_until: new Date(startsAt.getTime() + HOUR), status,
   }).returning().then(r => r[0]);
 };

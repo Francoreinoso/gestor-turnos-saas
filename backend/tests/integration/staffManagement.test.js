@@ -21,10 +21,10 @@ after(teardownDb);
 
 process.env.JWT_SECRET ??= 'test-secret';
 
-// captura el link (token crudo) que el use case le manda al "email"
+// captura el token crudo del link (spec 009 RF-21: el use case manda una URL `…/activar?token=…`) que le manda al "email"
 const spyEmail = () => {
   const links = [];
-  return { sendInvitation: async ({ to, link }) => { links.push({ to, link }); }, links };
+  return { sendInvitation: async ({ to, link }) => { links.push({ to, link: new URL(link).searchParams.get('token') }); }, links };
 };
 
 const repos = (email) => ({
@@ -37,8 +37,9 @@ const repos = (email) => ({
 const owner = { id: 'own', role: 'owner' };
 
 // spec 008 RF-4: el caso de uso recibe el `body` crudo; estos tests arman campos sueltos, así que se adaptan acá.
+// spec 009 RF-21: además recibe `appUrl`, base del enlace de activación.
 const inviteStaff = (db, { accountId, actor, name, email, commissionRate }, repos) =>
-  inviteStaffUseCase(db, { accountId, actor, body: { name, email, commission_rate: commissionRate } }, repos);
+  inviteStaffUseCase(db, { accountId, actor, body: { name, email, commission_rate: commissionRate }, appUrl: 'http://app.test' }, repos);
 
 const staffActor = { id: 'stf', role: 'staff' };
 
@@ -83,7 +84,7 @@ test('T27 — reenvío automático (pendiente, misma cuenta) y explícito invali
     );
 
     const secondLink = email.links[1].link;
-    await resendStaffInvitation(db, { id: first.user.id, accountId: account.id, actor: owner }, repos(email));
+    await resendStaffInvitation(db, { id: first.user.id, accountId: account.id, actor: owner, appUrl: 'http://app.test' }, repos(email));
     await assert.rejects(
       () => activateStaffAccount(db, { token: secondLink, password: 'clave12345' }, repos(email)),
       { status: 410 }, // RF-9/RF-10: el reenvío explícito invalidó también el de resend

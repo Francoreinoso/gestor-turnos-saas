@@ -366,7 +366,7 @@ test('spec 003 RF-19: completado→no_llego dentro de ventana (hoy) → ok, borr
       employeeId: user.id, scheduledAt: new Date(Date.now() - 3 * HOUR).toISOString(),
     }, repos); // nace completado (RF-9), con su pago
 
-    const updated = await correctAppointment(db, { id: appointment.id, accountId: acc.id, now: new Date() }, repos);
+    const updated = await correctAppointment(db, { id: appointment.id, accountId: acc.id, actor: owner, now: new Date() }, repos);
     assert.equal(updated.status, 'no_llego');
     const pays = await db.select().from(payments).where(eq(payments.appointment_id, appointment.id));
     assert.equal(pays.length, 0);
@@ -381,7 +381,7 @@ test('spec 003 RF-19: completado→no_llego tres días después → 422, el pago
     await db.insert(payments).values({ account_id: acc.id, appointment_id: appointment.id, assigned_user_id: user.id, amount: '50.00' });
 
     await assert.rejects(
-      () => correctAppointment(db, { id: appointment.id, accountId: acc.id, now: new Date() }, repos),
+      () => correctAppointment(db, { id: appointment.id, accountId: acc.id, actor: owner, now: new Date() }, repos),
       { status: 422, message: 'correction_window_expired' },
     );
     const pays = await db.select().from(payments).where(eq(payments.appointment_id, appointment.id));
@@ -395,7 +395,7 @@ test('spec 003 RF-20: no_llego→completado dentro de ventana (hoy) → ok, crea
     const scheduledAt = new Date(Date.now() - 3 * HOUR);
     const appointment = await seedAppointment(db, acc.id, { userId: user.id, clientId: client.id, serviceId: service.id, scheduledAt, status: 'no_llego' });
 
-    const updated = await correctAppointment(db, { id: appointment.id, accountId: acc.id, now: new Date() }, repos);
+    const updated = await correctAppointment(db, { id: appointment.id, accountId: acc.id, actor: owner, now: new Date() }, repos);
     assert.equal(updated.status, 'completado');
     const pays = await db.select().from(payments).where(eq(payments.appointment_id, appointment.id));
     assert.equal(pays.length, 1);
@@ -409,7 +409,7 @@ test('spec 003 RF-20: no_llego→completado tres días después → 422 también
     const appointment = await seedAppointment(db, acc.id, { userId: user.id, clientId: client.id, serviceId: service.id, scheduledAt, status: 'no_llego' });
 
     await assert.rejects(
-      () => correctAppointment(db, { id: appointment.id, accountId: acc.id, now: new Date() }, repos),
+      () => correctAppointment(db, { id: appointment.id, accountId: acc.id, actor: owner, now: new Date() }, repos),
       { status: 422, message: 'correction_window_expired' },
     );
     const pays = await db.select().from(payments).where(eq(payments.appointment_id, appointment.id));
