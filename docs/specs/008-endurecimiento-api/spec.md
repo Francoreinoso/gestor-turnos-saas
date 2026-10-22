@@ -146,7 +146,7 @@ Esta spec corrige todo lo anterior sin cambiar el contrato funcional de la API: 
   9. La configuración inválida no arranca y no imprime el secreto (RF-14, RF-15).
   10. Cabeceras presentes en respuestas OK y de error del backend, y ausencia de `X-Powered-By` (RF-16); las del frontend en la prueba de humo (RF-17, RF-22).
   11. Crear un turno pasado y correr el seed no emiten la advertencia de `pg` (se captura `process.on('warning')`) (RF-20).
-- `npm test` y `npm run db:migrate` del backend (en `TZ=UTC` y `TZ=America/Argentina/Buenos_Aires`), y `npm test`, `npm run lint`, `npm run build` y la verificación de tipos del frontend, en verde.
+- `npm test` y `npm run db:migrate` del backend (en `TZ=UTC` y `TZ=America/Santiago`), y `npm test`, `npm run lint`, `npm run build` y la verificación de tipos del frontend, en verde.
 - Demo manual contra el servidor real: repetir las pruebas que detectaron los defectos —`GET /availability/abc`, `POST /staff` sin cuerpo, 30 logins fallidos, medición de tiempo de login con email existente e inexistente, `curl -I` del backend y del frontend— y confirmar que cada una ya no reproduce el problema.
 
 ## Dudas abiertas

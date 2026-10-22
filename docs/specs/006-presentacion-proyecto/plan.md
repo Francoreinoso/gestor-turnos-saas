@@ -56,12 +56,12 @@ Servicios (todos con `restart` por defecto y `TZ` desde el `.env`):
 
 ### `.env.example` (raíz, reescrito) — RF-11, RF-18
 
-Variables con valores de desarrollo funcionales: `POSTGRES_DB=saas_dev`, `POSTGRES_USER=saas`, `POSTGRES_PASSWORD=saas`, `JWT_SECRET=<cadena evidente de desarrollo>` con comentario de cambiarla, `SEED_DEMO=true`, `TZ=America/Argentina/Buenos_Aires`, `DB_PORT`, `BACKEND_PORT`, `FRONTEND_PORT`. Cada una comentada en una línea. Se alinea `backend/.env.example` (sigue siendo para desarrollo sin Docker, con `localhost`).
+Variables con valores de desarrollo funcionales: `POSTGRES_DB=saas_dev`, `POSTGRES_USER=saas`, `POSTGRES_PASSWORD=saas`, `JWT_SECRET=<cadena evidente de desarrollo>` con comentario de cambiarla, `SEED_DEMO=true`, `TZ=America/Santiago`, `DB_PORT`, `BACKEND_PORT`, `FRONTEND_PORT`. Cada una comentada en una línea. Se alinea `backend/.env.example` (sigue siendo para desarrollo sin Docker, con `localhost`).
 
 ## 3. CI — `.github/workflows/ci.yml` (nuevo) — RF-29..RF-33
 
 - Disparadores: `push` a `main` y `pull_request`. `permissions: contents: read`. `concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }`.
-- **`backend`** — matriz `tz: [UTC, America/Argentina/Buenos_Aires]`; `services.postgres` con `postgres:17-alpine` y `--health-cmd pg_isready`; `actions/checkout@v4`, `actions/setup-node@v4` (`node-version: 22`, `cache: npm`, `cache-dependency-path: backend/package-lock.json`); pasos `npm ci` → `npm run db:migrate` → `npm test`, con `DATABASE_URL`, `JWT_SECRET` y `TZ` en `env`. `working-directory: backend`.
+- **`backend`** — matriz `tz: [UTC, America/Santiago]`; `services.postgres` con `postgres:17-alpine` y `--health-cmd pg_isready`; `actions/checkout@v4`, `actions/setup-node@v4` (`node-version: 22`, `cache: npm`, `cache-dependency-path: backend/package-lock.json`); pasos `npm ci` → `npm run db:migrate` → `npm test`, con `DATABASE_URL`, `JWT_SECRET` y `TZ` en `env`. `working-directory: backend`.
 - **`frontend`** — mismos pasos de Node; `npm ci` → `npm run lint` → `npm test` → `npm run build`.
 - **`smoke`** — `needs: [backend, frontend]`; `cp .env.example .env`; `docker compose config -q`; `docker compose up --build --wait --wait-timeout 300`; comprobaciones con `curl --fail`: `http://localhost:3000/health`, `http://localhost:5173/api/public/accounts/00000000-0000-4000-8000-000000000001` (verifica proxy y seed, y que traiga servicios) y `http://localhost:5173/reservar/00000000-0000-4000-8000-000000000001` (fallback de rutas); `if: failure()` → `docker compose logs`; `always()` → `docker compose down -v`.
 - Versiones de acciones fijadas a la mayor (`@v4`) y cachés de npm (RF-33).

@@ -90,7 +90,7 @@ frontend en `frontend/`. Sin migraciones de esquema.
 ## Fase 7 — Cierre
 
 - [ ] **T16 · Gate final** — todos los RF
-  Backend: `npm test` y `npm run db:migrate` sobre DB vacía; frontend: `npm test`, `npm run lint`, `npm run build`; backend también con `TZ=America/Argentina/Buenos_Aires`; repetir T10 desde un clon limpio con cronómetro.
+  Backend: `npm test` y `npm run db:migrate` sobre DB vacía; frontend: `npm test`, `npm run lint`, `npm run build`; backend también con `TZ=America/Santiago`; repetir T10 desde un clon limpio con cronómetro.
   **Hecho cuando:** todos los comandos salen con código 0 y el inicio rápido completo, desde `git clone` hasta ver la agenda del owner y la reserva pública, lleva menos de 5 minutos sin ningún comando extra.
 
 - [ ] **T17 · CI en GitHub** — RF-29..RF-33

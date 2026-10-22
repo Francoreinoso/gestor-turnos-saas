@@ -106,12 +106,12 @@ frontend en `frontend/`. Sin migraciones ni dependencias nuevas.
   **Hecho cuando:** el test del README sigue verde y los límites no contradicen la spec.
 
 - [x] **T21 · Gate final y verificación contra el servidor real** — todos los RF
-  Backend: `npm test` en `TZ=UTC` y `TZ=America/Argentina/Buenos_Aires`, y `npm run db:migrate` sobre DB vacía. Frontend: `npm test`, `npm run lint`, `npm run build`, `npm run typecheck`. Repetir las reproducciones guardadas en T00.
+  Backend: `npm test` en `TZ=UTC` y `TZ=America/Santiago`, y `npm run db:migrate` sobre DB vacía. Frontend: `npm test`, `npm run lint`, `npm run build`, `npm run typecheck`. Repetir las reproducciones guardadas en T00.
   **Hecho cuando:** todos los comandos salen con código 0 y las cuatro reproducciones ya no muestran el defecto (`GET /availability/abc` → 404 sin SQL; `POST /staff` sin cuerpo → 400; el 11.º login fallido → 429; los tiempos de login de email existente e inexistente son comparables).
 
 ---
 
-## Estado: implementado (415/415 tests de backend en verde en `UTC`, `America/Argentina/Buenos_Aires` y `Asia/Tokyo`; 91/91 de frontend)
+## Estado: implementado (415/415 tests de backend en verde en `UTC`, `America/Santiago` y `Asia/Tokyo`; 91/91 de frontend)
 
 Verificado contra el servidor real (`app.js`, base con la demo sembrada), las mismas pruebas que detectaron los defectos:
 

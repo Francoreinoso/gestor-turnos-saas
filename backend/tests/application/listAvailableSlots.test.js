@@ -103,3 +103,21 @@ test('RF-9: now posterior a toda la ventana → sin slots', async () => {
   const slots = await listAvailableSlots(db, input({ now: day(13) }), makeRepos());
   assert.deepEqual(slots, []);
 });
+
+// Cambio de hora: en America/Santiago (zona por defecto del proyecto) el horario de verano de 2026 empieza la noche del
+// sábado 5 al domingo 6 de septiembre. Las ventanas son hora de pared: las 09:00 se mantienen aunque el desfase con UTC
+// cambie. En cualquier otra zona (por ejemplo UTC, en la CI) la aserción vale igual; solo es "interesante" en Santiago.
+test('el fin de semana del cambio de hora, cada ventana empieza a la misma hora local', async () => {
+  const weekend = [6, 0].map(d => ({ day_of_week: d, start_time: '09:00:00', end_time: '13:00:00' }));
+  const repos = makeRepos({ users: { findWithAvailability: async () => [{ id: 'usr-1', availability: weekend }] } });
+  const slots = await listAvailableSlots(db, {
+    businessId: 'acc-1', serviceId: 'svc-1',
+    from: new Date(2026, 8, 5, 0, 0), to: new Date(2026, 8, 8, 0, 0),
+    now: new Date('2026-08-01T00:00:00Z'),
+  }, repos);
+
+  const byDay = (d) => slots.filter(s => new Date(s.starts_at).getDate() === d).map(s => new Date(s.starts_at).getHours());
+  assert.deepEqual(byDay(5), [9, 10, 11, 12]); // sábado
+  assert.deepEqual(byDay(6), [9, 10, 11, 12]); // domingo, ya con el horario nuevo
+  assert.equal(slots.length, 8);
+});

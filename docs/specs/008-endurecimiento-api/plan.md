@@ -102,7 +102,7 @@ Orden: primero los casos **no obvios**; después el camino feliz. Todos los de i
 - Arrancar el backend con `JWT_SECRET=` vacío, `TRUST_PROXY=uno` y `NODE_ENV=production` con el secreto de ejemplo: los tres terminan con código distinto de cero sin abrir el puerto. — RF-14
 
 ### Gate
-Backend: `npm test` (en `TZ=UTC` y `TZ=America/Argentina/Buenos_Aires`) y `npm run db:migrate`. Frontend: `npm test`, `npm run lint`, `npm run build`, `npm run typecheck`. Todos antes de cada commit.
+Backend: `npm test` (en `TZ=UTC` y `TZ=America/Santiago`) y `npm run db:migrate`. Frontend: `npm test`, `npm run lint`, `npm run build`, `npm run typecheck`. Todos antes de cada commit.
 
 ## 7. Mapa RF → módulo
 

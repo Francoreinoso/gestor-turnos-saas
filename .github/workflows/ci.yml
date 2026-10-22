@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tz: [UTC, America/Argentina/Buenos_Aires]
+        tz: [UTC, America/Santiago]
     services:
       postgres:
         image: postgres:17-alpine

@@ -54,7 +54,7 @@ Esta spec define lo necesario para que un revisor entienda el proyecto en un min
 - RF-15: CUANDO se solicita `GET /health`, EL SISTEMA responde 200 `{ "status": "ok" }` si la base responde, y 503 `{ "status": "unavailable" }` si no; no requiere autenticación ni expone datos internos.
 - RF-16: EL `Dockerfile` del backend instala solo dependencias de producción, corre con un usuario sin privilegios y no incluye en la imagen `.env`, `node_modules` locales ni los tests (mediante `.dockerignore`).
 - RF-17: CUANDO se ejecuta `docker compose up`, EL SISTEMA construye y sirve también el frontend en `http://localhost:5173`, y reenvía `/api` al backend quitando el prefijo, con el mismo comportamiento que el proxy de desarrollo de Vite; las rutas del navegador (`/reservar/...`, `/turno/...`, `/owner/...`) responden con la aplicación y no con un 404 del servidor. Un único `docker compose up` basta para usar el sistema completo.
-- RF-18: EL SISTEMA fija la variable `TZ` de los contenedores a partir del `.env` (por defecto `America/Argentina/Buenos_Aires`), y el README explica que navegador y servidor deben compartir zona.
+- RF-18: EL SISTEMA fija la variable `TZ` de los contenedores a partir del `.env` (por defecto `America/Santiago`), y el README explica que navegador y servidor deben compartir zona.
 
 ### Datos demo (seed)
 
@@ -72,7 +72,7 @@ Esta spec define lo necesario para que un revisor entienda el proyecto en un min
 ### Integración continua
 
 - RF-29: EL SISTEMA define un workflow de GitHub Actions que corre en cada `push` a `main` y en cada `pull_request`, con permisos mínimos (solo lectura del contenido) y cancelando ejecuciones anteriores de la misma rama.
-- RF-30: EL JOB de backend usa Node 22 (la versión del `Dockerfile`), un servicio de Postgres 17 con chequeo de salud, instala con `npm ci`, aplica las migraciones y corre `npm test`; se ejecuta con `TZ=UTC` y con `TZ=America/Argentina/Buenos_Aires`.
+- RF-30: EL JOB de backend usa Node 22 (la versión del `Dockerfile`), un servicio de Postgres 17 con chequeo de salud, instala con `npm ci`, aplica las migraciones y corre `npm test`; se ejecuta con `TZ=UTC` y con `TZ=America/Santiago`.
 - RF-31: EL JOB de frontend instala con `npm ci` y corre el lint, los tests y el build.
 - RF-32: EL JOB de humo copia `.env.example` a `.env`, construye las imágenes, levanta el entorno con `docker compose up --wait` (sin pasos manuales adicionales) y comprueba: `GET /health` → 200; `GET /api/public/accounts/<id fijo>` a través del frontend → 200 con servicios; y la página `/reservar/<id fijo>` del frontend → 200 con el HTML de la aplicación. Esto verifica que el inicio rápido del README funciona y que el proxy `/api` y el fallback de rutas del frontend andan.
 - RF-33: EL workflow fija las versiones de las acciones a una versión mayor y cachea las dependencias de npm.
@@ -133,7 +133,7 @@ Esta spec define lo necesario para que un revisor entienda el proyecto en un min
   3. Los datos del seed respetan las reglas reales: ningún solapamiento, pagos con comisión correcta, turnos futuros dentro de disponibilidad (RF-19, RF-20, RF-28).
   4. `GET /health` responde 503 con la base caída (RF-15).
   5. El test del README detecta un script inexistente, una variable sin documentar y un enlace roto (RF-10).
-  6. La CI corre en UTC y en `America/Argentina/Buenos_Aires` (RF-30) y el humo reproduce el inicio rápido (RF-32).
+  6. La CI corre en UTC y en `America/Santiago` (RF-30) y el humo reproduce el inicio rápido (RF-32).
 - `npm test` y `npm run db:migrate` del backend, y `npm test`, `npm run lint` y `npm run build` del frontend, en verde.
 - Demo manual: en un directorio vacío, seguir el README al pie de la letra (clonar, `cp .env.example .env`, `docker compose up`) y llegar a la agenda del owner y a la reserva pública en menos de 5 minutos, sin ejecutar ningún otro comando ni consultar nada más.
 
@@ -149,7 +149,7 @@ Esta spec define lo necesario para que un revisor entienda el proyecto en un min
 - **D4** — `GET /health` consulta la base (RF-15): un `200` fijo diría que el proceso vive aunque no pueda atender nada, y es justo lo que el orquestador y el humo de CI necesitan distinguir.
 - **D5** — Un job de humo con `docker compose up --wait` (RF-32): es la única forma de que el inicio rápido del README esté probado en cada cambio y no solo cuando alguien lo recuerda.
 - **D6** — La CI del backend corre en dos zonas horarias (RF-30): los slots dependen de la hora local del servidor y es la limitación más probable de romper en otra máquina; ya se verificó que la suite actual pasa en UTC, Buenos Aires y Tokio.
-- **D7** — `TZ` configurable con valor por defecto de Buenos Aires (RF-18): el producto está pensado para hora local argentina (formato `es-AR`) y hasta que haya zonas por negocio es la forma honesta de fijarla.
+- **D7** — `TZ` configurable con valor por defecto de Santiago de Chile (RF-18): el producto está pensado para la hora local de Chile y hasta que haya zonas por negocio es la forma honesta de fijarla. Chile tiene horario de verano (Buenos Aires no): la suite se verificó también en `America/Santiago`, y el formato de fechas de la interfaz sigue siendo `es-AR` (spec 005 RF-35).
 - **D8** — Compose deriva `DATABASE_URL` de las variables de Postgres (RF-12): tener la misma información escrita en dos lugares ya produjo un `.env.example` vacío e inconsistente.
 - **D9** — (Q1) El frontend entra en `docker-compose.yml` (RF-17) para que un único `docker compose up` entregue el sistema completo; se paga con un `Dockerfile` multi-etapa y `nginx`. A cambio, el humo de CI prueba el camino real que usará el revisor, incluido el proxy `/api`.
 - **D10** — (Q2) Se enmienda la constitución en lugar de migrar el backend a TypeScript (RF-34, RF-35): la migración es una spec aparte y mucho mayor, y hoy el backend funciona y está probado. La enmienda alinea la regla con la realidad y la deja registrada en un commit propio.

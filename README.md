@@ -74,7 +74,7 @@ Las variables de `.env` (todas con valores de desarrollo que funcionan tal cual)
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos; `docker-compose.yml` arma `DATABASE_URL` a partir de ellas |
 | `JWT_SECRET` | Firma de los JWT. **Cambiarla** fuera de desarrollo |
 | `SEED_DEMO` | `true` siembra la cuenta demo si todavía no existe; `false` solo migra |
-| `TZ` | Zona horaria de los contenedores (por defecto `America/Argentina/Buenos_Aires`) |
+| `TZ` | Zona horaria de los contenedores (por defecto `America/Santiago`) |
 | `DB_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | Puertos publicados, por si 5432, 3000 o 5173 están ocupados |
 
 El backend sin Docker lee además `NODE_ENV`, `PORT`, `DATABASE_URL` y `TRUST_PROXY` desde `backend/.env` (ver `backend/.env.example`). `TRUST_PROXY` es la cantidad de proxies de confianza delante del backend: con `0` (por defecto) ignora `X-Forwarded-For`; Docker Compose lo fija en `1` porque nginx va delante.
@@ -181,7 +181,7 @@ npm run db:migrate
 npm test
 ```
 
-Los tests de integración usan una base PostgreSQL real (`DATABASE_URL`). La suite debe pasar en cualquier zona horaria; la CI la corre con `TZ=UTC` y con `TZ=America/Argentina/Buenos_Aires`.
+Los tests de integración usan una base PostgreSQL real (`DATABASE_URL`). La suite debe pasar en cualquier zona horaria; la CI la corre con `TZ=UTC` y con `TZ=America/Santiago`.
 
 ```bash
 cd frontend
@@ -198,7 +198,7 @@ Cada feature sigue la misma cadena: [constitución](docs/constitution.md) → sp
 
 ## Límites conocidos y roadmap
 
-- Los horarios libres se calculan con la **hora local del servidor**: no hay zonas horarias por negocio.
+- Los horarios libres se calculan con la **hora local del servidor**: no hay zonas horarias por negocio. La zona por defecto es `America/Santiago`, que tiene horario de verano: las ventanas de atención son hora de pared y el cálculo de horarios libres tiene un test del fin de semana del cambio de hora, pero no hay pruebas de punta a punta de reservas que crucen ese cambio.
 - **No se envían notificaciones** al cliente: el enlace de gestión se muestra en pantalla al reservar o reprogramar.
 - El panel **solo muestra la agenda**: servicios, trabajadores y horarios existen únicamente como API.
 - La **activación de un trabajador invitado no tiene pantalla** (solo endpoint).
