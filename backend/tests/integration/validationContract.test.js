@@ -57,7 +57,7 @@ test('contrato de errores de forma y formato — RF-4, RF-5', () =>
       ['PUT', `/staff/${staff.id}/availability`, [{ ...WIN, day_of_week: '1' }], 422, 'invalid_day_of_week'],
       ['PUT', `/staff/${staff.id}/availability`, [{ ...WIN, start_time: '9:00' }], 422, 'invalid_time_format'],
       ['PUT', `/staff/${staff.id}/availability`, [{ ...WIN, end_time: '09:00' }], 422, 'start_must_be_before_end'],
-      ['GET', `/availability/${account.id}`, undefined, 400, 'date_from, date_to, service_id required'],
+      ['GET', `/availability/${account.id}`, undefined, 400, 'missing_fields'],
       ['GET', '/payments?period=xxx', undefined, 400, 'invalid_period'],
       ['GET', '/payments?date_from=2026-13-45&date_to=2026-01-01', undefined, 400, 'invalid_period'],
       ['GET', '/payments?period=hoy&date_from=2026-01-01', undefined, 400, 'ambiguous_period_filter'],

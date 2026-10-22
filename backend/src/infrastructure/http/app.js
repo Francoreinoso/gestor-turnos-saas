@@ -1,41 +1,22 @@
 import 'dotenv/config';
-import express from 'express';
-import accountRoutes from './routes/accounts.js';
-import authRoutes from './routes/auth.js';
-import appointmentRoutes from './routes/appointments.js';
-import serviceRoutes from './routes/services.js';
-import clientRoutes from './routes/clients.js';
-import availabilityRoutes from './routes/availability.js';
-import publicRoutes from './routes/public.js';
-import staffRoutes from './routes/staff.js';
-import meRoutes from './routes/me.js';
-import paymentRoutes from './routes/payments.js';
-import healthRoutes from './routes/health.js';
-import errorHandler from './middleware/errorHandler.js';
+import { loadConfig } from '../config.js';
+import { createApp } from './createApp.js';
 import { startCron } from '../integrations/cron.js';
 
-const app = express();
-app.use(express.json());
+// spec 008 RF-14: la configuración se valida antes de abrir el puerto. Si es inválida no se arranca y el mensaje
+// nombra la variable (nunca imprime el secreto).
+let config;
+try {
+  config = loadConfig(process.env);
+} catch (err) {
+  console.error(`[config] ${err.message}`);
+  process.exit(1);
+}
 
-// spec 006 RF-15: sin auth ni limitador, lo consulta el orquestador con frecuencia.
-app.use('/health', healthRoutes);
-
-app.use('/accounts', accountRoutes);
-app.use('/auth', authRoutes);
-app.use('/appointments', appointmentRoutes);
-app.use('/services', serviceRoutes);
-app.use('/clients', clientRoutes);
-app.use('/availability', availabilityRoutes);
-app.use('/public', publicRoutes);
-app.use('/staff', staffRoutes);
-app.use('/me', meRoutes);
-app.use('/payments', paymentRoutes);
-
-app.use(errorHandler);
+const app = createApp({ trustProxy: config.trustProxy });
 
 startCron();
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`listening on ${PORT}`));
+app.listen(config.port, () => console.log(`listening on ${config.port}`));
 
 export default app;

@@ -1,16 +1,9 @@
-import express from 'express';
-import publicRoutes from '../../src/infrastructure/http/routes/public.js';
-import availabilityRoutes from '../../src/infrastructure/http/routes/availability.js';
-import errorHandler from '../../src/infrastructure/http/middleware/errorHandler.js';
+import { createApp } from '../../src/infrastructure/http/createApp.js';
 
-// spec 005 D-P7: servidor Express efímero. app.js arranca el servidor y el cron al importarse,
-// así que se montan solo las rutas públicas y el errorHandler extraído.
+// spec 005 D-P7: servidor Express efímero. app.js arranca el servidor y el cron al importarse;
+// spec 008 D-P1: se monta la misma aplicación (createApp) que usa el servidor real.
 export async function startPublicServer() {
-  const app = express();
-  app.use(express.json());
-  app.use('/public', publicRoutes);
-  app.use('/availability', availabilityRoutes);
-  app.use(errorHandler);
+  const app = createApp();
 
   const server = await new Promise(resolve => { const s = app.listen(0, () => resolve(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;

@@ -11,7 +11,12 @@ const ERROR_LABELS: Record<string, string> = {
   missing_fields:      'Completá todos los campos.',
   email_taken:         'Ese email ya está registrado.',
   invalid_credentials: 'Email o contraseña incorrectos.',
+  too_many_requests:   'Demasiados intentos. Esperá unos minutos e intentá de nuevo.',
+  invalid_password:    'La contraseña debe tener entre 8 y 72 caracteres.',
 };
+
+// spec 008 RF-21: nunca se muestra un código crudo de la API (internal_error, payload_too_large, …).
+const GENERIC_ERROR = 'Ocurrió un error. Intentá de nuevo en unos minutos.';
 
 export default function LoginPage() {
   const [mode, setMode]       = useState<Mode>('login');
@@ -47,7 +52,7 @@ export default function LoginPage() {
       navigate(payload ? roleHome(payload.role) : '/login');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'error_desconocido';
-      setError(ERROR_LABELS[msg] ?? msg);
+      setError(ERROR_LABELS[msg] ?? GENERIC_ERROR);
     } finally {
       setLoading(false);
     }
@@ -78,7 +83,8 @@ export default function LoginPage() {
           </label>
           <label>
             Contraseña
-            <input name="password" type="password" required minLength={8} />
+            {/* spec 008 RF-11, RF-21: la política de contraseña rige al crear una; el login no la aplica (hay usuarios con claves más cortas). */}
+            <input name="password" type="password" required minLength={mode === 'register' ? 8 : undefined} />
           </label>
 
           {error && <p className="auth-error">{error}</p>}

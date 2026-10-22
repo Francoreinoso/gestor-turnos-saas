@@ -1,7 +1,7 @@
 // spec 007 — trabajadores, perfil propio y horario semanal (reemplaza a domain/staffEdit.js en lo que es forma).
 import { z } from 'zod';
 import { rule } from '../validation.js';
-import { requiredText, requiredEmail, commissionRate, editSchema } from './common.js';
+import { requiredText, requiredEmail, commissionRate, editSchema, passwordInRange } from './common.js';
 
 const invalidField = rule('invalid_field');
 
@@ -22,7 +22,7 @@ export const editStaffBody = editSchema({
 // PATCH /me (spec 002 RF-20, RF-21): nunca email/rol/comisión. La contraseña no se recorta.
 export const editSelfBody = editSchema({
   name: z.string({ error: invalidField }).trim(),
-  password: z.string({ error: invalidField }),
+  password: z.string({ error: invalidField }).refine(passwordInRange, rule('invalid_password')), // spec 008 RF-11
 });
 
 export const listStaffQuery = z.object({

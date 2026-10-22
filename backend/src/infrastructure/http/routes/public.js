@@ -1,8 +1,8 @@
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import { db } from '../../db/client.js';
 import * as repos from '../../db/repositories/index.js';
 import publicAuth from '../middleware/publicAuth.js';
+import { strictLimiter, readLimiter } from '../middleware/limiters.js';
 import { createAppointment } from '../../../application/createAppointment.js';
 import { rescheduleAppointment } from '../../../application/rescheduleAppointment.js';
 import { getPublicAccount } from '../../../application/getPublicAccount.js';
@@ -15,12 +15,8 @@ const router = express.Router();
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
-// spec 005 RF-8 / D-P4: dos limitadores aplicados por ruta (no router.use), cada uno con su propio cupo por IP.
-// strictLimiter frena fuerza bruta sobre tokens en las escrituras; readLimiter es para las lecturas que no modifican nada.
-const WINDOW_MS = 15 * 60 * 1000;
-// ponytail: 20 req/15min per IP — tighten if brute-force becomes a concern
-const strictLimiter = rateLimit({ windowMs: WINDOW_MS, limit: 20, message: { error: 'too_many_requests' } });
-const readLimiter = rateLimit({ windowMs: WINDOW_MS, limit: 120, message: { error: 'too_many_requests' } });
+// spec 005 RF-8 / D-P4: dos limitadores aplicados por ruta (no router.use), cada uno con su propio cupo por IP
+// (definidos en middleware/limiters.js): strictLimiter en las escrituras y la activación, readLimiter en las lecturas.
 
 // spec 005 RF-1..RF-4 — nombre, servicios activos y profesionales activos del negocio. Sin autenticación.
 router.get('/accounts/:id', readLimiter, wrap(async (req, res) => {

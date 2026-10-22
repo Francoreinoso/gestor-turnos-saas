@@ -13,21 +13,20 @@ import { replaceStaffAvailability } from '../../../application/replaceStaffAvail
 
 import { parseInput } from '../../../domain/validation.js';
 import { listStaffQuery } from '../../../domain/schemas/staff.js';
+import { uuidParams } from '../middleware/uuidParams.js';
 
 const router = express.Router();
+uuidParams(router);
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 
 const actorOf = (req) => ({ id: req.user.id, role: req.user.role });
 
 // spec 002 RF-1..RF-9, RF-13..RF-15 — invitar (alta) a un trabajador.
 router.post('/', auth, wrap(async (req, res) => {
-  const { name, email, commission_rate } = req.body;
   const { user, action } = await inviteStaff(db, {
     accountId: req.user.account_id,
     actor: actorOf(req),
-    name,
-    email,
-    commissionRate: commission_rate,
+    body: req.body, // spec 008 RF-4: se valida en el caso de uso, después del chequeo de rol
   }, repos);
   res.status(action === 'create' ? 201 : 200).json({ user });
 }));

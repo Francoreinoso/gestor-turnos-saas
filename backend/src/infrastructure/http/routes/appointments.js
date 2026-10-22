@@ -11,8 +11,10 @@ import { listAppointments } from '../../../application/listAppointments.js';
 import { getAppointment } from '../../../application/getAppointment.js';
 import { parseInput } from '../../../domain/validation.js';
 import { panelAppointmentBody, blockBody } from '../../../domain/schemas/appointments.js';
+import { uuidParams } from '../middleware/uuidParams.js';
 
 const router = express.Router();
+uuidParams(router);
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 

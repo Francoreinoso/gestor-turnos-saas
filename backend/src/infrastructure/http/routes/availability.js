@@ -4,8 +4,10 @@ import * as repos from '../../db/repositories/index.js';
 import { listAvailableSlots } from '../../../application/listAvailableSlots.js';
 import { parseInput } from '../../../domain/validation.js';
 import { slotsQuery } from '../../../domain/schemas/availability.js';
+import { uuidParams } from '../middleware/uuidParams.js';
 
 const router = express.Router();
+uuidParams(router, { business_id: 'service_not_found' });
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 
 router.get('/:business_id', wrap(async (req, res) => {

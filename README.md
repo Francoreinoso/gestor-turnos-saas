@@ -77,7 +77,7 @@ Las variables de `.env` (todas con valores de desarrollo que funcionan tal cual)
 | `TZ` | Zona horaria de los contenedores (por defecto `America/Argentina/Buenos_Aires`) |
 | `DB_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | Puertos publicados, por si 5432, 3000 o 5173 están ocupados |
 
-El backend sin Docker lee además `NODE_ENV`, `PORT` y `DATABASE_URL` desde `backend/.env` (ver `backend/.env.example`).
+El backend sin Docker lee además `NODE_ENV`, `PORT`, `DATABASE_URL` y `TRUST_PROXY` desde `backend/.env` (ver `backend/.env.example`). `TRUST_PROXY` es la cantidad de proxies de confianza delante del backend: con `0` (por defecto) ignora `X-Forwarded-For`; Docker Compose lo fija en `1` porque nginx va delante.
 
 **Zona horaria:** los horarios libres se calculan en la hora local del servidor, y el navegador los muestra en la suya. Conviene que ambos compartan zona; por eso `TZ` es configurable.
 
@@ -160,6 +160,19 @@ La especificación completa está en el [documento de diseño §4](docs/diseno-g
 - **Validación con Zod, en un solo lugar.** Cada endpoint declara su entrada con un esquema puro de `domain/schemas/`; el primer fallo se traduce al mismo `{ error: <código> }` de siempre y las reglas de negocio quedan fuera. ([§4](docs/diseno-gestor-turnos.md), [spec 007](docs/specs/007-validacion-zod/spec.md))
 - **Clean architecture.** `domain` sin I/O, `application` orquesta y `infrastructure` es reemplazable; el seed usa los mismos casos de uso que la API, así los datos demo respetan las mismas reglas. ([§5](docs/diseno-gestor-turnos.md))
 
+## Seguridad
+
+Qué protege el sistema hoy ([spec 008](docs/specs/008-endurecimiento-api/spec.md)):
+
+- **Errores que no filtran nada.** Un error inesperado responde siempre `{ "error": "internal_error" }`; el detalle (consulta SQL, traza) queda solo en el log del servidor, sin la query string —que puede llevar el token de un enlace de gestión—. Los errores del parser de JSON se traducen a un código fijo.
+- **Identificadores validados antes de tocar la base.** Un id que no es UUID responde 404 como uno inexistente. Una prueba recorre las rutas registradas, de modo que una ruta nueva sin esa guarda hace fallar la suite.
+- **Límite de intentos.** El login admite 10 intentos fallidos cada 15 minutos por IP (los correctos no cuentan), el registro 5 por hora, y las rutas públicas de escritura 20 cada 15 minutos. Detrás de nginx se cuenta por IP real del cliente (`TRUST_PROXY=1`).
+- **Contraseñas.** De 8 caracteres a 72 bytes al crearlas (`bcrypt` trunca lo que pasa de 72). El login no revela si un email existe: hace siempre una comparación `bcrypt` completa, así que tarda lo mismo.
+- **JWT con algoritmo fijo** (HS256): un token `alg: none` o de otro algoritmo se rechaza.
+- **Configuración que falla rápido.** Sin `JWT_SECRET` el servidor no arranca; en producción además exige 32 caracteres como mínimo y rechaza los secretos de ejemplo del repositorio.
+- **Cabeceras.** La API envía `nosniff`, `Referrer-Policy: no-referrer` y `Cache-Control: no-store`, y no `X-Powered-By`. El frontend, `nosniff`, `X-Frame-Options: DENY` y `no-referrer`, para que el token de un enlace de gestión no salga como `Referer`.
+- **Backend solo en `127.0.0.1`** con Docker Compose: desde fuera de la máquina la API se alcanza únicamente a través del frontend, que es quien fija la IP real del cliente.
+
 ## Tests
 
 ```bash
@@ -193,6 +206,11 @@ Cada feature sigue la misma cadena: [constitución](docs/constitution.md) → sp
 - La conexión a la base no ofrece una opción de SSL propia: se activa solo con `NODE_ENV=production`, y la base de Compose no lo soporta.
 - **Faltan capturas de pantalla** en este README; se sumarán cuando la interfaz esté estable.
 - El repositorio **no declara licencia** por el momento.
+- **Sesiones:** el JWT dura 7 días y no hay refresh tokens ni cierre de sesión en el servidor; solo la baja de un trabajador revoca su acceso de inmediato.
+- **Sin `Content-Security-Policy` ni `Strict-Transport-Security`:** la primera no puede verificarse sin un navegador real en la CI; la segunda corresponde al terminador TLS de un despliegue real, que este repositorio no incluye.
+- Los **límites de uso viven en la memoria de cada proceso**: no se comparten entre varias réplicas del backend.
+- Con Docker, la IP que ve nginx es la del cliente solo si Docker no la enmascara (por ejemplo, con Docker Desktop o redes rootless todos pueden aparecer con la IP de la puerta de enlace y compartir un mismo cupo).
+- **Sin recuperación de contraseña** ni verificación de email.
 
 Pendientes de producto: notificaciones por email o WhatsApp, zonas horarias por negocio, pantallas del panel para servicios, trabajadores y horarios, activación de trabajadores y recuperación de contraseña.
 

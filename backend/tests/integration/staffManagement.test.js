@@ -5,7 +5,7 @@ import { setupDb, teardownDb, withAccount, db } from '../helpers/db.js';
 import { userRepo } from '../../src/infrastructure/db/repositories/users.js';
 import { staffInvitationTokenRepo } from '../../src/infrastructure/db/repositories/staffInvitationTokens.js';
 import { appointmentRepo } from '../../src/infrastructure/db/repositories/appointments.js';
-import { inviteStaff } from '../../src/application/inviteStaff.js';
+import { inviteStaff as inviteStaffUseCase } from '../../src/application/inviteStaff.js';
 import { resendStaffInvitation } from '../../src/application/resendStaffInvitation.js';
 import { activateStaffAccount } from '../../src/application/activateStaffAccount.js';
 import { deactivateStaff } from '../../src/application/deactivateStaff.js';
@@ -35,6 +35,11 @@ const repos = (email) => ({
 });
 
 const owner = { id: 'own', role: 'owner' };
+
+// spec 008 RF-4: el caso de uso recibe el `body` crudo; estos tests arman campos sueltos, así que se adaptan acá.
+const inviteStaff = (db, { accountId, actor, name, email, commissionRate }, repos) =>
+  inviteStaffUseCase(db, { accountId, actor, body: { name, email, commission_rate: commissionRate } }, repos);
+
 const staffActor = { id: 'stf', role: 'staff' };
 
 test('T26 — alta → activar → login', () =>

@@ -156,6 +156,8 @@ Un cliente recibe un link (por WhatsApp/email) para cancelar o reprogramar su tu
 
 Todas las rutas que aceptan este mecanismo (sin JWT) se agrupan bajo el prefijo `/public/...`, para tenerlas identificadas y limitadas por IP. Desde la spec 005 hay **dos limitadores**, aplicados por ruta (no a todo el grupo): uno estricto (20 solicitudes / 15 min) en las escrituras y en la activación de cuenta —reservar, cancelar, reprogramar, `staff-invitations/activate`—, que es el que frena la fuerza bruta sobre tokens; y otro laxo (120 / 15 min) en las dos lecturas públicas, que no modifican nada. Cada uno lleva su propio cupo. Superado el tope: 429 `too_many_requests`.
 
+**Códigos de error uniformes (spec 008).** Toda respuesta de error es `{ "error": "<código>" }`. Un error de aplicación 4xx lleva un código `snake_case` (`not_found`, `appointment_overlap`, `invalid_password`, …) y se devuelve tal cual; los errores del parser de JSON se traducen a `invalid_body` (400), `payload_too_large` (413) y `unsupported_media_type` (415); cualquier otro 4xx con un mensaje que no sea un código es `bad_request`; y un error inesperado es siempre `internal_error` (500), sin mensaje, SQL ni traza. Un identificador de ruta que no es UUID responde 404 como uno inexistente, y el login y el registro tienen su propio límite de intentos por IP (10 fallidos cada 15 minutos y 5 por hora).
+
 ### 3.10 Autorización por rol (`owner` vs `staff`)
 
 - **Nunca confiar en datos que el cliente controla** (query string, body) para decisiones de autorización — siempre derivarlas del payload del JWT, que el backend firmó y solo el backend puede validar. Aplica a `employee_id` en filtros de lectura y a `assigned_user_id` en bloqueos de escritura.

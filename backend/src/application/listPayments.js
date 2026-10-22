@@ -1,6 +1,7 @@
 import { resolvePeriod } from '../domain/paymentsPeriod.js';
 import { parseInput } from '../domain/validation.js';
 import { paymentsQuery } from '../domain/schemas/payments.js';
+import { uuidOrNil } from '../domain/uuid.js';
 
 const LIST_LIMIT = 500; // mismo valor que el listado de turnos (listAppointments.js RF-41)
 
@@ -15,7 +16,7 @@ export const listPayments = async (db, { accountId, actor, query: rawQuery = {},
   });
 
   // RF-9: mismo alcance por rol que el resumen — el staff solo ve lo suyo.
-  const employeeId = actor.role === 'staff' ? actor.id : query.employee_id;
+  const employeeId = actor.role === 'staff' ? actor.id : uuidOrNil(query.employee_id); // spec 008 RF-6: no UUID → inexistente
 
   const rows = await repos.payments.findForList(db, { accountId, employeeId, from, to, limit: LIST_LIMIT + 1 });
 

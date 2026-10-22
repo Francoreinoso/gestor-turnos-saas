@@ -11,6 +11,7 @@ const makeRepos = (calls, o = {}) => ({
 });
 
 const db = {};
+const U1 = '123e4567-e89b-12d3-a456-426614174001'; // spec 008: el filtro debe ser un UUID para llegar al repo
 const now = new Date('2026-09-17T12:00:00Z');
 const owner = { id: 'own-1', role: 'owner' };
 const staff = { id: 'stf-1', role: 'staff' };
@@ -71,9 +72,9 @@ test('staff → summarizeByEmployee NUNCA se llama, la respuesta no trae byEmplo
 
 test('RF-3: owner con employee_id válido → summarize y summarizeByEmployee reciben ese filtro', async () => {
   const calls = [];
-  await getPaymentsSummary(db, { accountId: 'acc-1', actor: owner, query: { employee_id: 'u1' }, now }, makeRepos(calls));
-  assert.equal(calls[0][1].employeeId, 'u1'); // summarize
-  assert.equal(calls[1][1].employeeId, 'u1'); // summarizeByEmployee
+  await getPaymentsSummary(db, { accountId: 'acc-1', actor: owner, query: { employee_id: U1 }, now }, makeRepos(calls));
+  assert.equal(calls[0][1].employeeId, U1); // summarize
+  assert.equal(calls[1][1].employeeId, U1); // summarizeByEmployee
 });
 
 test('RF-13: preset y rango libre juntos → 400 antes de tocar el repo (también a nivel de aplicación, no solo dominio)', async () => {

@@ -46,3 +46,20 @@ test('RF-37: `type` funciona como alias de `status`', async () => {
   await listAppointments(db, { accountId: 'acc-1', actor: { role: 'owner' }, query: { type: 'agendado' } }, makeRepos(spy));
   assert.equal(spy.args.filters.status, 'agendado');
 });
+
+// spec 008 RF-6
+test('owner con employee_id que no es UUID → 400 invalid_body sin consultar el repo', async () => {
+  const spy = {};
+  await assert.rejects(
+    () => listAppointments(db, { accountId: 'acc-1', actor: { role: 'owner' }, query: { employee_id: 'abc' } }, makeRepos(spy)),
+    { status: 400, message: 'invalid_body' },
+  );
+  assert.equal(spy.args, undefined);
+});
+
+test('owner con employee_id UUID válido (aunque no exista) → se consulta con ese filtro', async () => {
+  const spy = {};
+  const id = '123e4567-e89b-12d3-a456-426614174000';
+  await listAppointments(db, { accountId: 'acc-1', actor: { role: 'owner' }, query: { employee_id: id } }, makeRepos(spy));
+  assert.equal(spy.args.filters.employeeId, id);
+});

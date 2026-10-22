@@ -6,8 +6,10 @@ import { users } from '../../../../db/schema.js';
 import auth from '../middleware/auth.js';
 import { parseInput } from '../../../domain/validation.js';
 import { commissionBody } from '../../../domain/schemas/accounts.js';
+import { uuidParams } from '../middleware/uuidParams.js';
 
 const router = express.Router();
+uuidParams(router);
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 

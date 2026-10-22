@@ -4,8 +4,10 @@ import { serviceRepo } from '../../db/repositories/services.js';
 import auth from '../middleware/auth.js';
 import { parseInput } from '../../../domain/validation.js';
 import { createServiceBody, editServiceBody, priceBody } from '../../../domain/schemas/services.js';
+import { uuidParams } from '../middleware/uuidParams.js';
 
 const router = express.Router();
+uuidParams(router);
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 const ownerOnly = (req, res, next) => req.user.role === 'owner' ? next() : res.status(403).json({ error: 'forbidden' });

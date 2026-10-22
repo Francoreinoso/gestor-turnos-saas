@@ -27,7 +27,7 @@ test('register con tipos incorrectos → 400, no 500 — RF-9', async () => {
     const res = await api.call('POST', '/auth/register', body);
     assert.equal(res.status, 400, JSON.stringify(body));
   }
-  const ok = await api.call('POST', '/auth/register', { business_name: 'B', name: 'A', email: `R-${crypto.randomUUID()}@Test.com`, password: 'clave' });
+  const ok = await api.call('POST', '/auth/register', { business_name: 'B', name: 'A', email: `R-${crypto.randomUUID()}@Test.com`, password: 'clave1234' });
   assert.equal(ok.status, 201);
 });
 

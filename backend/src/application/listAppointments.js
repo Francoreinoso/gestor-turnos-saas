@@ -1,5 +1,6 @@
 import { parseInput } from '../domain/validation.js';
 import { listAppointmentsQuery } from '../domain/schemas/appointments.js';
+import { isUuid } from '../domain/uuid.js';
 
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
@@ -21,6 +22,8 @@ export const listAppointments = async (db, { accountId, actor, query: rawQuery =
 
   // RF-42: el staff solo ve lo suyo.
   const employeeId = actor.role === 'staff' ? actor.id : query.employee_id;
+  // spec 008 RF-6: un filtro que no es UUID no puede llegar a Postgres. Se valida después del rol: un staff ignora cualquier valor (RF-42).
+  if (actor.role !== 'staff' && employeeId !== undefined && !isUuid(employeeId)) throw httpErr(400, 'invalid_body');
 
   // RF-40: rango invertido → lista vacía, sin error.
   if (dateFrom && dateTo && dateFrom.getTime() > dateTo.getTime()) return [];

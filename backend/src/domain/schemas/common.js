@@ -16,6 +16,17 @@ export const requiredText = ({ wrong = 'invalid_body' } = {}) =>
 export const requiredRaw = ({ wrong = 'invalid_body' } = {}) =>
   z.string({ error: typeError('missing_fields', wrong) }).min(1, rule('missing_fields'));
 
+// spec 008 RF-11: contraseña nueva de 8 caracteres a 72 bytes UTF-8 (bcrypt trunca en silencio lo que pasa de 72 bytes).
+// Sin recortar. El login NO aplica esta regla: los usuarios existentes con contraseñas más cortas siguen entrando.
+const PASSWORD_MIN_CHARS = 8;
+const PASSWORD_MAX_BYTES = 72;
+const utf8 = new TextEncoder();
+export const passwordInRange = (value) =>
+  [...value].length >= PASSWORD_MIN_CHARS && utf8.encode(value).length <= PASSWORD_MAX_BYTES;
+
+export const newPassword = ({ wrong = 'invalid_body' } = {}) =>
+  requiredRaw({ wrong }).refine(passwordInRange, rule('invalid_password'));
+
 // Email obligatorio: solo minúsculas (mismo resultado que normalizeEmail), sin recortar.
 export const requiredEmail = () =>
   z.string({ error: typeError('missing_fields') }).min(1, rule('missing_fields')).toLowerCase();

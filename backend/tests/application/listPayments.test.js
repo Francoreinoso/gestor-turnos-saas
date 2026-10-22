@@ -13,6 +13,7 @@ const makeRepos = (calls, rows) => ({
 });
 
 const db = {};
+const MISSING = '123e4567-e89b-12d3-a456-426614174099'; // UUID válido que no existe
 const now = new Date('2026-09-17T12:00:00Z');
 const owner = { id: 'own-1', role: 'owner' };
 const staff = { id: 'stf-1', role: 'staff' };
@@ -56,8 +57,8 @@ test('período inválido → 400 antes de tocar el repo', async () => {
 
 test('RF-4: owner con employee_id ajeno/inexistente → el repo se llama con ese filtro (el vacío lo resuelve la query real, no listPayments)', async () => {
   const calls = [];
-  const result = await listPayments(db, { accountId: 'acc-1', actor: owner, query: { employee_id: 'no-existe' }, now }, makeRepos(calls, []));
-  assert.equal(calls[0].employeeId, 'no-existe');
+  const result = await listPayments(db, { accountId: 'acc-1', actor: owner, query: { employee_id: MISSING }, now }, makeRepos(calls, []));
+  assert.equal(calls[0].employeeId, MISSING);
   assert.deepEqual(result, { payments: [], hasMore: false });
 });
 

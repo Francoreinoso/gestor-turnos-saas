@@ -1,6 +1,7 @@
 import { resolvePeriod } from '../domain/paymentsPeriod.js';
 import { parseInput } from '../domain/validation.js';
 import { paymentsQuery } from '../domain/schemas/payments.js';
+import { uuidOrNil } from '../domain/uuid.js';
 
 // spec 003 RF-1..RF-7 — resumen financiero agregado, con desglose por
 // profesional para el owner (siempre en la misma respuesta, D1 del spec).
@@ -14,7 +15,7 @@ export const getPaymentsSummary = async (db, { accountId, actor, query: rawQuery
   });
 
   // RF-3, RF-6, RF-7: el staff solo ve lo suyo, sin importar el filtro recibido.
-  const employeeId = actor.role === 'staff' ? actor.id : query.employee_id;
+  const employeeId = actor.role === 'staff' ? actor.id : uuidOrNil(query.employee_id); // spec 008 RF-6: no UUID → inexistente
 
   const summary = await repos.payments.summarize(db, { accountId, employeeId, from, to }); // RF-1, RF-4, RF-5, RF-6
 

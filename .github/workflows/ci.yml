@@ -65,6 +65,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run lint
+      - run: npm run typecheck
       - run: npm test
       - run: npm run build
 
@@ -88,6 +89,24 @@ jobs:
           grep -q '"services":\[{' account.json
       - name: Fallback de rutas del frontend
         run: curl --fail --silent --show-error "http://localhost:5173/reservar/$DEMO_ID" | grep -q '<div id="root">'
+      # spec 008 RF-17, RF-22: cabeceras de las respuestas estáticas del frontend (incluido un 404 y la ruta de respaldo).
+      - name: Cabeceras de seguridad del frontend
+        run: |
+          CHECK=.github/scripts/check-headers.sh
+          HEADERS=('x-content-type-options: nosniff' 'x-frame-options: DENY' 'referrer-policy: no-referrer')
+          ASSET=$(curl --fail --silent http://localhost:5173/ | grep -oE '/assets/[^"]+\.js' | head -1)
+          test -n "$ASSET"
+          "$CHECK" http://localhost:5173/ "${HEADERS[@]}"
+          "$CHECK" "http://localhost:5173$ASSET" "${HEADERS[@]}"
+          "$CHECK" http://localhost:5173/assets/no-existe.js "${HEADERS[@]}"
+          "$CHECK" "http://localhost:5173/reservar/$DEMO_ID" "${HEADERS[@]}"
+      # spec 008 RF-16, RF-17: la API a través del proxy lleva sus cabeceras UNA sola vez (nginx no las duplica) y no X-Powered-By.
+      - name: Cabeceras de la API a través del proxy
+        run: |
+          .github/scripts/check-headers.sh http://localhost:5173/api/health \
+            'x-content-type-options: nosniff' 'referrer-policy: no-referrer' 'cache-control: no-store' -- x-powered-by
+          test "$(curl --silent --head http://localhost:5173/api/health | tr -d '\r' | grep -ic '^x-content-type-options:')" -eq 1
+          test "$(curl --silent --head http://localhost:5173/api/health | tr -d '\r' | grep -ic '^referrer-policy:')" -eq 1
       - if: failure()
         run: docker compose logs
       - if: always()

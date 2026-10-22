@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { verifyToken } from '../jwt.js';
 import { db } from '../../db/client.js';
 import { userRepo } from '../../db/repositories/users.js';
 
@@ -9,7 +9,7 @@ export default async (req, res, next) => {
   if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'unauthorized' });
 
   try {
-    const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    const payload = verifyToken(header.slice(7));
     const user = await userRepo.findById(db, payload.id);
     if (!user || user.status !== 'activo') return res.status(401).json({ error: 'unauthorized' });
 

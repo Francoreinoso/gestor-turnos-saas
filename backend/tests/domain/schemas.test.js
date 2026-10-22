@@ -21,13 +21,13 @@ const fails = (schema, data, message, status = 400) =>
 
 test('auth: normaliza (trim, minúsculas) y no recorta password — RF-12', () => {
   assert.deepEqual(
-    parseInput(registerBody, { business_name: ' B ', name: ' Ana ', email: 'A@B.COM', password: ' p ' }),
-    { business_name: 'B', name: 'Ana', email: 'a@b.com', password: ' p ' },
+    parseInput(registerBody, { business_name: ' B ', name: ' Ana ', email: 'A@B.COM', password: ' password1 ' }),
+    { business_name: 'B', name: 'Ana', email: 'a@b.com', password: ' password1 ' },
   );
 });
 
 test('auth: ausente, vacío o solo espacios → missing_fields; tipo incorrecto → invalid_body — RF-9', () => {
-  const ok = { business_name: 'B', name: 'A', email: 'a@b.com', password: 'p' };
+  const ok = { business_name: 'B', name: 'A', email: 'a@b.com', password: 'password1' };
   for (const k of Object.keys(ok)) {
     fails(registerBody, { ...ok, [k]: undefined }, 'missing_fields');
     fails(registerBody, { ...ok, [k]: '' }, 'missing_fields');
@@ -129,7 +129,7 @@ test('staff: invitar con comisión 422; edición estricta; perfil propio — RF-
   fails(editSelfBody, { email: 'a@b.com' }, 'invalid_field');
   fails(editSelfBody, { commission_rate: 0.5 }, 'invalid_field');
   fails(editSelfBody, {}, 'empty_update');
-  assert.deepEqual(parseInput(editSelfBody, { password: ' nueva ' }), { password: ' nueva ' }); // sin recortar
+  assert.deepEqual(parseInput(editSelfBody, { password: ' nueva123 ' }), { password: ' nueva123 ' }); // sin recortar
 });
 
 test('staff horario: forma → 400, valores → 422, la forma completa se evalúa primero — RF-5', () => {
@@ -151,9 +151,9 @@ test('staff horario: forma → 400, valores → 422, la forma completa se evalú
 test('payments y availability: query', () => {
   assert.deepEqual(parseInput(paymentsQuery, { period: 'hoy' }), { period: 'hoy' });
   fails(paymentsQuery, { period: ['a'] }, 'invalid_period');
-  fails(slotsQuery, {}, 'date_from, date_to, service_id required');
+  fails(slotsQuery, {}, 'missing_fields');
   fails(slotsQuery, { date_from: 'a', date_to: 'b', service_id: U }, 'invalid_date');
-  fails(slotsQuery, { date_from: 'a', date_to: 'b' }, 'date_from, date_to, service_id required');
+  fails(slotsQuery, { date_from: 'a', date_to: 'b' }, 'missing_fields');
   assert.equal(parseInput(slotsQuery, { date_from: '2030-01-01', date_to: '2030-01-02', service_id: U }).service_id, U);
 });
 
@@ -169,5 +169,5 @@ test('public: booking, reprogramar y activar — RF-4, RF-9', () => {
   fails(publicBookingBody, { ...ok, account_id: 'no-uuid' }, 'invalid_body');
   fails(rescheduleBody, {}, 'missing_fields');
   fails(activateBody, { token: 't' }, 'missing_fields');
-  assert.deepEqual(parseInput(activateBody, { token: 't', password: ' p ' }), { token: 't', password: ' p ' });
+  assert.deepEqual(parseInput(activateBody, { token: 't', password: ' password1 ' }), { token: 't', password: ' password1 ' });
 });

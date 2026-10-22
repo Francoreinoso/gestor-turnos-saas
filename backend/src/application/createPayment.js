@@ -1,11 +1,11 @@
 import { resolveCommission } from '../domain/resolveCommission.js';
 
 export async function createPayment(db, appointment, repos) {
-  const [service, user, account] = await Promise.all([
-    repos.services.findById(db, appointment.service_id, appointment.account_id),
-    appointment.assigned_user_id ? repos.users.findById(db, appointment.assigned_user_id) : null,
-    repos.accounts.findById(db, appointment.account_id),
-  ]);
+  // spec 008 RF-20: lecturas en secuencia. Esta función corre sobre el cliente de una transacción y pg no admite
+  // consultas simultáneas sobre un mismo cliente (hoy advierte; en pg@9 dejará de funcionar).
+  const service = await repos.services.findById(db, appointment.service_id, appointment.account_id);
+  const user = appointment.assigned_user_id ? await repos.users.findById(db, appointment.assigned_user_id) : null;
+  const account = await repos.accounts.findById(db, appointment.account_id);
 
   const { rate, employeeAmount, businessAmount } = resolveCommission(
     service.price,

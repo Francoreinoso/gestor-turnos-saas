@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { inviteStaff } from '../../src/application/inviteStaff.js';
+import { inviteStaff as inviteStaffUseCase } from '../../src/application/inviteStaff.js';
 
 const makeRepos = (o = {}) => ({
   users: {
@@ -23,6 +23,10 @@ const makeRepos = (o = {}) => ({
 const db = { transaction: async (fn) => fn(db) };
 const owner = { id: 'own-1', role: 'owner', account_id: 'acc-1' };
 const base = { accountId: 'acc-1', actor: owner, name: 'Ana', email: 'ana@test.com' };
+// spec 008 RF-4: el caso de uso recibe el `body` crudo; estos tests arman campos sueltos, así que se adaptan acá.
+const inviteStaff = (db, { accountId, actor, name, email, commissionRate }, repos) =>
+  inviteStaffUseCase(db, { accountId, actor, body: { name, email, commission_rate: commissionRate } }, repos);
+
 
 // T08 — validación
 
@@ -122,4 +126,25 @@ test('si el envío de email falla, no queda nada persistido (rollback)', async (
   // el use case no traga el error de email dentro de la transacción — se propaga tal cual,
   // que es lo que hace que Postgres revierta la escritura en un `db.transaction` real.
   assert.equal(userCreated, true);
+});
+
+// spec 008 RF-4 — cuerpo que no es un objeto: 400 invalid_body, nunca 500; el rol se evalúa antes (403).
+test('body ausente, null, array o texto → 400 invalid_body sin tocar ningún repo', async () => {
+  const calls = [];
+  const spy = new Proxy({}, { get: (_, name) => new Proxy({}, { get: (__, method) => async () => { calls.push(`${String(name)}.${String(method)}`); } }) });
+  for (const body of [undefined, null, [], 'texto', 42]) {
+    await assert.rejects(
+      () => inviteStaffUseCase(db, { accountId: 'acc-1', actor: owner, body }, spy),
+      { status: 400, message: 'invalid_body' },
+      JSON.stringify(body),
+    );
+  }
+  assert.deepEqual(calls, []);
+});
+
+test('un actor staff con body inválido recibe 403, no 400 (el rol se evalúa primero)', async () => {
+  await assert.rejects(
+    () => inviteStaffUseCase(db, { accountId: 'acc-1', actor: { id: 'stf-1', role: 'staff' }, body: undefined }, {}),
+    { status: 403 },
+  );
 });
