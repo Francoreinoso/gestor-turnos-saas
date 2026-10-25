@@ -50,6 +50,20 @@
       "when": 1791000000000,
       "tag": "0006_spec_004_availability_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792000000000,
+      "tag": "0007_spec_011_assistant",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792000000001,
+      "tag": "0008_spec_011_client_uniqueness_per_account",
+      "breakpoints": true
     }
   ]
 }

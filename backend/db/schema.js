@@ -125,6 +125,34 @@ export const payments = pgTable('payments', {
   created_at: timestamp('created_at').notNull().defaultNow(),
 });
 
+// spec 011 — el índice único parcial y los CHECK viven en la migración 0007.
+export const assistantProposalStatusEnum = pgEnum('assistant_proposal_status', ['pendiente', 'confirmada', 'descartada', 'vencida']);
+
+export const assistantProposals = pgTable('assistant_proposals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  account_id: uuid('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
+  client_id: uuid('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  service_id: uuid('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
+  employee_id: uuid('employee_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  starts_at: timestamp('starts_at').notNull(),
+  status: assistantProposalStatusEnum('status').notNull().default('pendiente'),
+  appointment_id: uuid('appointment_id').references(() => appointments.id),
+  expires_at: timestamp('expires_at').notNull(),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const assistantCodes = pgTable('assistant_codes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  account_id: uuid('account_id').notNull().references(() => accounts.id, { onDelete: 'cascade' }),
+  phone: varchar('phone', { length: 20 }).notNull(),
+  // SHA-256 of the actual code — raw code never stored
+  code_hash: varchar('code_hash', { length: 64 }).notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  expires_at: timestamp('expires_at').notNull(),
+  used_at: timestamp('used_at'),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+});
+
 // ── Relations ──────────────────────────────────────────────────────────────────
 
 export const accountsRelations = relations(accounts, ({ many }) => ({

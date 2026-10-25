@@ -17,13 +17,21 @@ export const clientRepo = {
   update: (db, id, data) =>
     db.update(clients).set(data).where(eq(clients.id, id)).returning().then(r => r[0]),
 
+  // spec 011 RF-19: busca dentro de la cuenta por email y, si no aparece, por teléfono (ambos son únicos por cuenta,
+  // migración 0008). Dos altas simultáneas: la segunda choca con el índice, no inserta nada y relee la fila ganadora.
   findOrCreate: async (db, { accountId, email, phone }, defaults) => {
-    const where = email
-      ? and(eq(clients.account_id, accountId), eq(clients.email, email))
-      : and(eq(clients.account_id, accountId), eq(clients.phone, phone));
+    const find = async () => {
+      if (email) {
+        const byEmail = await db.query.clients.findFirst({ where: and(eq(clients.account_id, accountId), eq(clients.email, email)) });
+        if (byEmail) return byEmail;
+      }
+      if (phone) return db.query.clients.findFirst({ where: and(eq(clients.account_id, accountId), eq(clients.phone, phone)) });
+      return undefined;
+    };
 
-    const existing = await db.query.clients.findFirst({ where });
+    const existing = await find();
     if (existing) return existing;
-    return db.insert(clients).values(defaults).returning().then(r => r[0]);
+    const [created] = await db.insert(clients).values(defaults).onConflictDoNothing().returning();
+    return created ?? find();
   },
 };

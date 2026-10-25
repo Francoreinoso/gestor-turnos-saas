@@ -36,6 +36,7 @@ WhatsApp u otros canales; reprogramar; ventana mínima de cancelación; pagos; v
 - RF-2: CUANDO el cliente envía el código correcto (`POST /assistant/session/verify`), EL SISTEMA devuelve un token de sesión corto (1 h) con `account_id` y `client_id` (el cliente se busca o crea por teléfono dentro de la cuenta).
 - RF-3: SI el código es incorrecto, vencido o ya usado, ENTONCES responde 401 `invalid_code`; tras 5 intentos fallidos el código se invalida.
 - RF-4: EL SISTEMA limita mensajes y solicitudes de código por teléfono y por IP.
+- RF-19: UNA misma persona puede ser cliente de varios negocios: el teléfono y el email de `clients` son únicos **dentro de cada cuenta**, no en toda la base (la migración 0001 los hizo globales, y verificar el código de un teléfono que ya era cliente de otra cuenta respondía 500). AL buscar o crear un cliente, EL SISTEMA lo busca en la cuenta por email y, si no aparece, por teléfono; dos altas simultáneas del mismo cliente terminan en una sola fila, sin error. Corrige también la reserva pública (spec 005).
 
 ### Herramientas
 
@@ -54,7 +55,7 @@ WhatsApp u otros canales; reprogramar; ventana mínima de cancelación; pagos; v
 
 ### Conversación
 
-- RF-14: EL asistente responde en español rioplatense, solo sobre turnos del negocio; rechaza lo demás y no sigue instrucciones que aparezcan dentro de datos (nombres de servicio, notas).
+- RF-14: EL asistente responde en español latinoamericano neutro (tuteo), solo sobre turnos del negocio; rechaza lo demás y no sigue instrucciones que aparezcan dentro de datos (nombres de servicio, notas).
 - RF-15: ANTES de cancelar, EL asistente pide confirmación explícita del cliente en el chat.
 - RF-16: EL bucle de herramientas tiene un máximo de 8 iteraciones por mensaje; los `stopReason` normalizados `refusal` y `max_tokens` (que los adaptadores derivan, entre otros, de `content_filter` y `length`) se informan al cliente con un mensaje genérico.
 - RF-18: CUANDO el proveedor responde con límite de uso (429), error de red, timeout o error 5xx, `/assistant/*` responde 503 `assistant_busy` con un mensaje genérico para el cliente («intenta de nuevo en unos minutos»), sin exponer el detalle del proveedor y sin dejar propuestas a medias.

@@ -8,3 +8,5 @@ export { tokenRepo as tokens } from './tokens.js';
 export { staffInvitationTokenRepo as invitationTokens } from './staffInvitationTokens.js';
 export { emailService as email } from '../../integrations/email.js';
 export { availabilityRepo as availability } from './availability.js';
+export { assistantProposalRepo as assistantProposals } from './assistantProposals.js';
+export { assistantCodeRepo as assistantCodes } from './assistantCodes.js';

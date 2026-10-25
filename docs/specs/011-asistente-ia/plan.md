@@ -10,6 +10,7 @@
 
 - `assistant_proposals(id, account_id, client_id, service_id, employee_id, starts_at, status pendiente|confirmada|descartada|vencida, appointment_id, expires_at)`; índice único parcial por `(client_id, service_id, employee_id, starts_at)` en estado pendiente.
 - `assistant_codes(id, account_id, phone, code_hash, attempts, expires_at, used_at)`.
+- Migración `0008` (T2b, RF-19): reemplaza los índices únicos globales `clients_phone_unique` y `clients_email_unique` de la 0001 por `(account_id, phone)` y `(account_id, lower(email))`, parciales igual que antes. La 0001 no se edita (principio 8); los datos existentes ya cumplen la regla nueva, que es menos estricta. `clientRepo.findOrCreate` busca por email y luego por teléfono dentro de la cuenta, e inserta con `ON CONFLICT DO NOTHING` y relectura.
 - Los `slot_id` viven en la sesión firmada del turno de chat (se reconstruyen del historial de `tool_result`), sin tabla.
 
 ## Bucle del agente
