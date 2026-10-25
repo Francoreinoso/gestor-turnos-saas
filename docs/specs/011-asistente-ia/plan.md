@@ -4,7 +4,7 @@
 
 - `domain/`: esquemas zod de las herramientas (`domain/schemas/assistant.js`), reglas de propuesta (vencimiento, estados).
 - `application/assistant/`: `tools/*` (una por herramienta), `runAssistantTurn.js` (bucle), `startSession.js`, `verifySession.js`, `confirmProposal.js`, `cancelOwnAppointment.js`.
-- `infrastructure/`: `integrations/llm.js` (cliente Anthropic inyectable), `http/routes/assistant.js`, repos `assistantProposals` y `assistantCodes`, migración `0007`.
+- `infrastructure/`: `integrations/llm/` con el puerto `llmClient` (`send({system, messages, tools}) -> {content, stopReason, usage}` en formato normalizado), `anthropicAdapter.js`, `openaiAdapter.js` (fetch nativo) y `index.js` que elige según `ASSISTANT_PROVIDER`, `http/routes/assistant.js`, repos `assistantProposals` y `assistantCodes`, migración `0007`.
 
 ## Datos (migración 0007)
 
@@ -14,10 +14,17 @@
 
 ## Bucle del agente
 
-Manual, sobre `client.messages.create`: `thinking: {type:"adaptive"}`, `output_config.effort` explícito, tools con `strict: true` y sin `tool_choice` forzado, `cache_control` sobre tools+system, historial solo-append. Todos los `tool_result` de un turno van en un único mensaje de usuario. La fecha actual se inyecta al final del system prompt.
+Manual, sobre el puerto `llmClient`, sin tocar el formato de ningún proveedor. Las opciones propias de Anthropic (`thinking: {type:"adaptive"}`, `output_config.effort` explícito, tools con `strict: true`, `cache_control` sobre tools+system) viven solo en `anthropicAdapter`. Sin `tool_choice` forzado; historial solo-append. Todos los `tool_result` de un turno van en un único mensaje de usuario. La fecha actual se inyecta al final del system prompt.
+
+## Proveedores
+
+- Formato normalizado: bloques `text`, `tool_use {id,name,input}` y `tool_result {tool_use_id,content,is_error}`; `stopReason` en `end_turn | tool_use | max_tokens | refusal`.
+- `openaiAdapter` traduce `tool_use` a `tool_calls`, los `tool_result` a mensajes `role: tool`, y `finish_reason` (`stop`, `tool_calls`, `length`, `content_filter`) a `stopReason`. Si el modelo devuelve los argumentos como JSON inválido, se trata como entrada inválida (`is_error`), no como fallo del servidor.
+- Configuración: `ASSISTANT_PROVIDER`, `ASSISTANT_BASE_URL`, `ASSISTANT_API_KEY`; con `openai` el `ASSISTANT_MODEL` no tiene valor por defecto y es obligatorio.
 
 ## Riesgos
 
 - Identidad por teléfono: mitigado con código de un solo uso y límites.
 - Inyección de prompt vía datos del negocio: el backend impone los permisos; el prompt es solo una segunda barrera.
 - Costo: tope de iteraciones, caché de prompt, límite de mensajes por sesión.
+- Modelos gratuitos pequeños: más errores de herramientas y respuestas fuera de tema; mitigado por validación zod, tope de iteraciones y confirmación por botón. Los límites de las capas gratuitas cambian: se verifican al momento de la demo.

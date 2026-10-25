@@ -10,6 +10,15 @@ Principio rector: **el modelo nunca toca la base de datos**. Pide herramientas; 
 
 Se agrega `@anthropic-ai/sdk` al backend: es el SDK oficial; reimplementar el cliente HTTP, los reintentos y los tipos de la Messages API sería más código propio y más riesgo. Modelo por defecto: `claude-sonnet-5-5`, configurable con `ASSISTANT_MODEL`.
 
+### Proveedor intercambiable (demo gratuita)
+
+El bucle del agente depende de un puerto `llmClient` propio, no del SDK. Hay dos adaptadores, elegidos con `ASSISTANT_PROVIDER` (`anthropic`, por defecto, o `openai`):
+
+- `anthropic`: usa `@anthropic-ai/sdk` y `ANTHROPIC_API_KEY`.
+- `openai`: habla el protocolo `chat/completions` compatible con OpenAI mediante `fetch` nativo (sin dependencia nueva), contra `ASSISTANT_BASE_URL` con `ASSISTANT_API_KEY`. Sirve para capas gratuitas (Gemini, Groq, OpenRouter) y para Ollama local, útil en una demo sin costo.
+
+Un modelo gratuito tendrá menos fiabilidad con herramientas; por eso el backend sigue imponiendo permisos y el modelo nunca decide identidad ni escribe en la base.
+
 ## Fuera de alcance (v1)
 
 WhatsApp u otros canales; reprogramar; ventana mínima de cancelación; pagos; voz.
@@ -51,10 +60,11 @@ WhatsApp u otros canales; reprogramar; ventana mínima de cancelación; pagos; v
 
 ### Evals
 
-- RF-17: EXISTE un conjunto de evals (`backend/evals/`) contra el modelo real, fuera de `npm test`, que verifica sobre las llamadas a herramientas: no reserva sin proponer, no cancela turnos ajenos, no inventa slots, pide aclaración si falta el servicio, resiste inyección de instrucciones y rechaza temas ajenos.
+- RF-17: EXISTE un conjunto de evals (`backend/evals/`) contra el modelo real configurado (cualquier proveedor), fuera de `npm test`, que verifica sobre las llamadas a herramientas: no reserva sin proponer, no cancela turnos ajenos, no inventa slots, pide aclaración si falta el servicio, resiste inyección de instrucciones y rechaza temas ajenos.
 
 ## Requisitos no funcionales
 
 - RNF-1: aislamiento por cuenta en toda consulta (principios 2 y 6).
-- RNF-2: `ANTHROPIC_API_KEY` solo en el servidor; si falta, `/assistant/*` responde 503 `assistant_unavailable` y el resto de la app funciona.
+- RNF-2: las claves (`ANTHROPIC_API_KEY`, `ASSISTANT_API_KEY`) solo en el servidor; si falta la del proveedor elegido, `/assistant/*` responde 503 `assistant_unavailable` y el resto de la app funciona. Ollama local no exige clave, pero sí `ASSISTANT_BASE_URL`.
+- RNF-4: el bucle del agente trabaja con mensajes, llamadas a herramientas y resultados en un formato interno normalizado; cada adaptador traduce desde y hacia el de su proveedor.
 - RNF-3: el cliente LLM es inyectable para pruebas; `npm test` nunca llama a la API real.
