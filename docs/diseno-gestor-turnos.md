@@ -23,8 +23,8 @@ Documento vivo con las decisiones tomadas hasta ahora. Sirve como referencia ant
 - `id` PK
 - `account_id` FK
 - `name`, `notes`
-- `email` (opcional individualmente; `UNIQUE` sobre `lower(email)`, normalizado a minúsculas antes de guardar)
-- `phone` (opcional individualmente; `UNIQUE`, normalizado a formato E.164 antes de guardar)
+- `email` (opcional individualmente; `UNIQUE` sobre `(account_id, lower(email))`, normalizado a minúsculas antes de guardar)
+- `phone` (opcional individualmente; `UNIQUE` sobre `(account_id, phone)`, normalizado a formato E.164 antes de guardar)
 - `CHECK`: al menos uno de `email`/`phone` debe existir (mismo patrón de nulabilidad condicional que en `appointments`)
 
 **appointment_access_tokens** (tabla nueva — tokens de acceso sin login para clientes)
@@ -61,6 +61,17 @@ Documento vivo con las decisiones tomadas hasta ahora. Sirve como referencia ant
 - `created_at`
 
 **payments**, **notifications**, **attachments**, **availability** — definidas en el ERD inicial, sin cambios respecto al diseño original.
+
+**assistant_proposals** (spec 011 — reservas propuestas por el asistente de IA, todavía sin turno)
+- `id` PK, `account_id` FK, `client_id` FK, `service_id` FK, `employee_id` FK → users
+- `starts_at`, `expires_at` (10 minutos después de proponer)
+- `status` (`pendiente` | `confirmada` | `descartada` | `vencida`)
+- `appointment_id` FK → appointments (el turno creado al confirmar)
+- Índice único parcial sobre `(client_id, service_id, employee_id, starts_at)` en estado `pendiente`; `CHECK`: una `confirmada` siempre tiene `appointment_id`
+
+**assistant_codes** (spec 011 — códigos de verificación por teléfono)
+- `id` PK, `account_id` FK, `phone`
+- `code_hash` (SHA-256; el código nunca se guarda en claro), `attempts` (`CHECK` 0 a 5), `expires_at` (10 minutos), `used_at` (NULL = válido)
 
 ---
 
@@ -148,7 +159,7 @@ Si el cliente no elige un profesional específico, el sistema auto-asigna uno di
 
 ### 3.8 Prevención de clientes duplicados
 
-`clients` no tiene login, así que no hay contraseña que fuerce unicidad de forma natural. Se resuelve con `UNIQUE` sobre `email` (normalizado a minúsculas) y sobre `phone` (normalizado a formato E.164) — normalizar *antes* de guardar es necesario porque el mismo número/mail puede escribirse de formas distintas (`+56912345678` vs `912345678`) y la constraint compara valores byte a byte. Ambos campos son individualmente opcionales (un turista sin RUT/email podría reservar solo con teléfono), pero un `CHECK` exige que exista al menos uno de los dos.
+`clients` no tiene login, así que no hay contraseña que fuerce unicidad de forma natural. Se resuelve con `UNIQUE` sobre `email` (normalizado a minúsculas) y sobre `phone` (normalizado a formato E.164) — normalizar *antes* de guardar es necesario porque el mismo número/mail puede escribirse de formas distintas (`+56912345678` vs `912345678`) y la constraint compara valores byte a byte. La unicidad es **por cuenta** (spec 011 RF-19, migración 0008): una misma persona puede ser cliente de varios negocios, cada uno con su propia ficha, y ninguno ve la del otro. Al buscar o crear un cliente se busca primero por email y después por teléfono dentro de la cuenta. Ambos campos son individualmente opcionales (un turista sin RUT/email podría reservar solo con teléfono), pero un `CHECK` exige que exista al menos uno de los dos.
 
 ### 3.9 Acceso sin login para clientes (tokens de un solo turno)
 
@@ -174,6 +185,15 @@ Diferencias funcionales `owner` vs `staff`:
 | Editar servicios (nombre, duración, precio) | Sí | No |
 | Bloquear turnos/días | Propios, de cualquier empleado, o negocio completo | Solo los propios |
 | Resumen financiero | Sí | No |
+
+### 3.11 Asistente de IA (spec 011)
+
+El modelo **nunca toca la base de datos**: pide herramientas y el backend decide. Cada entrada se valida con Zod (`domain/schemas/assistant.js`, objetos estrictos: una clave de más como `account_id` o `client_id` es `invalid_input`) y una entrada inválida o un error de negocio vuelve al modelo como `tool_result` con `is_error`, sin ejecutar nada. La cuenta y el cliente salen siempre del token de sesión.
+
+- **Identidad por teléfono:** código de 6 dígitos de un solo uso (10 minutos, 5 intentos); al verificar, el cliente se busca o crea por teléfono dentro de la cuenta y se entrega un token de sesión de 1 hora, firmado con una clave derivada de `JWT_SECRET` (no sirve en el panel).
+- **Historial firmado, sin tabla:** la conversación (en el formato normalizado del puerto `llmClient`) viaja en el cliente comprimida y firmada, atada a la sesión. Los `slot_id` que devuelve `ver_disponibilidad` se reconstruyen de ese historial; `proponer_reserva` rechaza cualquier otro con `slot_invalid`.
+- **Confirmación fuera del modelo:** `proponer_reserva` crea una propuesta `pendiente`; el turno nace en `POST /assistant/proposals/:id/confirm`, que bloquea la fila (idempotente) y usa el mismo caso de uso que la reserva pública. Si el horario se ocupó: 409 `appointment_overlap` y la propuesta queda `descartada`.
+- **Bucle:** manual, sobre el puerto `llmClient` (adaptadores de Anthropic y de APIs compatibles con OpenAI), historial solo-append, todos los `tool_result` de una respuesta en un único mensaje, máximo 8 iteraciones por mensaje. `refusal` y `max_tokens` se informan con un mensaje genérico; un 429, error de red, timeout o 5xx del proveedor responde 503 `assistant_busy` y descarta las propuestas de ese mensaje.
 
 ---
 
@@ -240,11 +260,22 @@ Diferencias funcionales `owner` vs `staff`:
 
 ---
 
+### Recurso `assistant` (spec 011)
+
+| Método | Ruta | Descripción | Quién |
+|---|---|---|---|
+| POST | `/assistant/session` | `{ account_id, phone }` → 202 `{ message: "code_sent" }`, igual exista o no el cliente. Más de 3 códigos por teléfono en 15 minutos → 429 | público |
+| POST | `/assistant/session/verify` | `{ account_id, phone, code }` → `{ token, expires_in }`. Código incorrecto, vencido o usado → 401 `invalid_code` | público |
+| POST | `/assistant/messages` | `{ message, conversation? }` → `{ reply, proposals, conversation }`. Conversación ajena o manipulada → 400 `invalid_conversation`; más de 30 mensajes → 429 `conversation_limit` | cliente, con token de sesión |
+| POST | `/assistant/proposals/:id/confirm` | Crea el turno (201) o devuelve el ya creado (200), con el enlace de gestión la primera vez. Ajena → 404; vencida → 409 `proposal_expired`; descartada → 409 `proposal_discarded`; horario tomado → 409 `appointment_overlap` | cliente, con token de sesión |
+
+*Sin el proveedor configurado, todas responden 503 `assistant_unavailable` y el resto de la API funciona igual. Es el único 5xx con código propio, junto con `assistant_busy`.*
+
 ### Rutas del frontend (spec 005)
 
 | Ruta | Pantalla | Acceso |
 |---|---|---|
-| `/reservar/:accountId` | Reserva pública en pasos: servicio → profesional → día y horario → datos → confirmación (devuelve el enlace de gestión) | público, con o sin sesión |
+| `/reservar/:accountId` | Reserva pública en pasos: servicio → profesional → día y horario → datos → confirmación (devuelve el enlace de gestión). Debajo, el asistente de IA (spec 011): teléfono → código → chat con botón «Confirmar» por propuesta | público, con o sin sesión |
 | `/turno/:id?token=` | Ver, cancelar o reprogramar un turno desde su enlace de gestión. El token vive solo en la URL; nunca se guarda en el navegador | público, con o sin sesión |
 | `/login`, `/owner/agenda`, `/staff/agenda` | Panel autenticado | según rol |
 
