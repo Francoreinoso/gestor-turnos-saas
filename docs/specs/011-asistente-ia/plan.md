@@ -27,4 +27,4 @@ Manual, sobre el puerto `llmClient`, sin tocar el formato de ningún proveedor. 
 - Identidad por teléfono: mitigado con código de un solo uso y límites.
 - Inyección de prompt vía datos del negocio: el backend impone los permisos; el prompt es solo una segunda barrera.
 - Costo: tope de iteraciones, caché de prompt, límite de mensajes por sesión.
-- Modelos gratuitos pequeños: más errores de herramientas y respuestas fuera de tema; mitigado por validación zod, tope de iteraciones y confirmación por botón. Los límites de las capas gratuitas cambian: se verifican al momento de la demo.
+- Modelos gratuitos pequeños: más errores de herramientas y respuestas fuera de tema; mitigado por validación zod, tope de iteraciones y confirmación por botón. Los límites de las capas gratuitas cambian: se verifican al momento de la demo, y un 429 se traduce a 503 `assistant_busy` (RF-18).

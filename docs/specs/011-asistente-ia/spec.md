@@ -8,7 +8,7 @@ Principio rector: **el modelo nunca toca la base de datos**. Pide herramientas; 
 
 ## Justificación de la dependencia (constitución, principio 1)
 
-Se agrega `@anthropic-ai/sdk` al backend: es el SDK oficial; reimplementar el cliente HTTP, los reintentos y los tipos de la Messages API sería más código propio y más riesgo. Modelo por defecto: `claude-sonnet-5-5`, configurable con `ASSISTANT_MODEL`.
+Se agrega `@anthropic-ai/sdk` al backend: es el SDK oficial; reimplementar el cliente HTTP, los reintentos y los tipos de la Messages API sería más código propio y más riesgo. Solo lo importa `anthropicAdapter` (importación dinámica), de modo que con `ASSISTANT_PROVIDER=openai` el SDK no se carga. Modelo por defecto con `anthropic`: `claude-sonnet-5-5`, configurable con `ASSISTANT_MODEL`.
 
 ### Proveedor intercambiable (demo gratuita)
 
@@ -56,7 +56,8 @@ WhatsApp u otros canales; reprogramar; ventana mínima de cancelación; pagos; v
 
 - RF-14: EL asistente responde en español rioplatense, solo sobre turnos del negocio; rechaza lo demás y no sigue instrucciones que aparezcan dentro de datos (nombres de servicio, notas).
 - RF-15: ANTES de cancelar, EL asistente pide confirmación explícita del cliente en el chat.
-- RF-16: EL bucle de herramientas tiene un máximo de 8 iteraciones por mensaje; `refusal` y `max_tokens` se informan al cliente con un mensaje genérico.
+- RF-16: EL bucle de herramientas tiene un máximo de 8 iteraciones por mensaje; los `stopReason` normalizados `refusal` y `max_tokens` (que los adaptadores derivan, entre otros, de `content_filter` y `length`) se informan al cliente con un mensaje genérico.
+- RF-18: CUANDO el proveedor responde con límite de uso (429), error de red, timeout o error 5xx, `/assistant/*` responde 503 `assistant_busy` con un mensaje genérico para el cliente («intenta de nuevo en unos minutos»), sin exponer el detalle del proveedor y sin dejar propuestas a medias.
 
 ### Evals
 
