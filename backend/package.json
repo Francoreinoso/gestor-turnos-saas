@@ -8,6 +8,8 @@
     "dev": "nodemon src/infrastructure/http/app.js",
     "test": "node --test tests/**/*.test.js",
     "test:integration": "node --test tests/integration/**/*.test.js",
+    "evals": "node evals/run.js",
+    "evals:compare": "node evals/compare.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node db/migrate.js",
     "db:seed": "node db/seed.js",
