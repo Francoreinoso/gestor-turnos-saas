@@ -20,10 +20,11 @@ export const appointmentRepo = {
 
   // spec 001 RF-36..RF-41: listado acotado a la cuenta, con filtros opcionales y tope de filas.
   findForList: (db, { accountId, filters = {}, limit }) => {
-    const { status, employeeId, dateFrom, dateTo } = filters;
+    const { status, employeeId, clientId, dateFrom, dateTo } = filters;
     const conditions = [eq(appointments.account_id, accountId)];
     if (status) conditions.push(eq(appointments.status, status));
     if (employeeId) conditions.push(eq(appointments.assigned_user_id, employeeId));
+    if (clientId) conditions.push(eq(appointments.client_id, clientId)); // spec 011 RF-7
     if (dateFrom) conditions.push(gte(appointments.scheduled_at, dateFrom));
     if (dateTo) conditions.push(lte(appointments.scheduled_at, dateTo));
 
@@ -40,6 +41,12 @@ export const appointmentRepo = {
     db.query.appointments.findFirst({
       where: and(eq(appointments.id, id), eq(appointments.account_id, accountId)),
       with: SUMMARY_WITH,
+    }),
+
+  // spec 011 RF-9: un turno solo si es del cliente y la cuenta de la sesión del asistente.
+  findForClient: (db, { id, accountId, clientId }) =>
+    db.query.appointments.findFirst({
+      where: and(eq(appointments.id, id), eq(appointments.account_id, accountId), eq(appointments.client_id, clientId)),
     }),
 
   create: (db, data) =>
