@@ -652,3 +652,51 @@ p { margin: 0; }
   .pay-table td::before { content: attr(data-label); font-weight: 600; color: var(--text-h); }
   .dash-tools .mgmt-filter { margin-left: 0; max-width: none; width: 100%; }
 }
+
+/* ── Asistente de reservas (spec 011) ──────────────────────────────────────── */
+.assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.assistant .pub-actions button,
+.assistant > button { align-self: flex-start; }
+
+.assistant-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.assistant-msg {
+  max-width: 85%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9375rem;
+}
+.assistant-msg-assistant { align-self: flex-start; background: var(--bg-subtle); color: var(--text-h); }
+.assistant-msg-user { align-self: flex-end; background: var(--accent); color: #fff; }
+
+.assistant-proposal {
+  padding: 0.75rem;
+  border: 1px solid var(--accent);
+  background: var(--accent-bg);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.assistant-proposal-title { font-weight: 600; color: var(--text-h); margin: 0; }
+
+.assistant-input { display: flex; gap: 0.5rem; }
+.assistant-input input { flex: 1; min-width: 0; }

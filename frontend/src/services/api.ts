@@ -46,9 +46,13 @@ export const api = {
 };
 
 // Cliente de las pantallas públicas (reservar, gestionar turno): nunca adjunta el JWT ni desloguea.
+// spec 011: `bearer` es el token de sesión del asistente, que vive solo en la memoria del widget.
+const bearerHeader = (bearer?: string): HeadersInit => (bearer ? { Authorization: `Bearer ${bearer}` } : {});
+
 export const apiPublic = {
   get:   <T>(path: string)                 => request<T>(path, { auth: false }),
-  post:  <T>(path: string, body: unknown)  => request<T>(path, { auth: false, method: 'POST',  body: JSON.stringify(body) }),
+  post:  <T>(path: string, body: unknown, bearer?: string) =>
+    request<T>(path, { auth: false, method: 'POST', body: body === undefined ? undefined : JSON.stringify(body), headers: bearerHeader(bearer) }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { auth: false, method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
 };
 

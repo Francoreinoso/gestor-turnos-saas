@@ -4,6 +4,7 @@ import { publicService } from '../services/public';
 import { ApiError } from '../services/api';
 import SlotPicker from '../components/SlotPicker';
 import ManageLinkBox from '../components/ManageLinkBox';
+import AssistantChat from '../components/AssistantChat';
 import { buildBookingPayload, manageLink, validateClient } from '../domain/booking';
 import type { ClientErrors, ClientInput } from '../domain/booking';
 import { publicErrorMessage } from '../domain/errors';
@@ -298,6 +299,9 @@ export default function BookingPage() {
           <ManageLinkBox link={manageLink(window.location.origin, result.appointment.id, result.access_token)} />
         </section>
       )}
+
+      {/* spec 011: alternativa conversacional al formulario. */}
+      {step !== 'done' && <AssistantChat accountId={accountId} />}
     </main>
   );
 }
