@@ -45,17 +45,46 @@ const parseAppUrl = (raw, nodeEnv) => {
 };
 
 export const DEFAULT_ASSISTANT_MODEL = 'claude-sonnet-5-5';
-const MODEL_PATTERN = /^[A-Za-z0-9._:-]{1,100}$/;
+// Admite `/`: los proveedores compatibles con OpenAI nombran modelos como `openai/gpt-oss-120b` (Groq, OpenRouter).
+const MODEL_PATTERN = /^[A-Za-z0-9._:/-]{1,100}$/;
 
-// spec 011: la clave es opcional (sin ella el asistente queda deshabilitado) y nunca aparece en un mensaje de error.
-const parseAnthropicApiKey = (raw) => {
+// spec 011: las claves son opcionales (sin la del proveedor elegido el asistente queda deshabilitado) y nunca
+// aparecen en un mensaje de error.
+const parseApiKey = (raw) => {
   const key = (raw ?? '').trim();
   return key === '' ? null : key;
 };
 
-const parseAssistantModel = (raw) => {
-  if (raw === undefined || raw === '') return DEFAULT_ASSISTANT_MODEL;
+export const ASSISTANT_PROVIDERS = ['anthropic', 'openai'];
+
+const parseAssistantProvider = (raw) => {
+  if (raw === undefined || raw === '') return 'anthropic';
+  if (!ASSISTANT_PROVIDERS.includes(raw)) throw new ConfigError(`ASSISTANT_PROVIDER debe ser uno de: ${ASSISTANT_PROVIDERS.join(', ')}`);
+  return raw;
+};
+
+// Con `openai` el modelo no tiene valor por defecto: depende del proveedor compatible que se use.
+const parseAssistantModel = (raw, provider) => {
+  if (raw === undefined || raw === '') {
+    if (provider === 'openai') throw new ConfigError('ASSISTANT_MODEL es obligatorio con ASSISTANT_PROVIDER=openai');
+    return DEFAULT_ASSISTANT_MODEL;
+  }
   if (!MODEL_PATTERN.test(raw)) throw new ConfigError('ASSISTANT_MODEL debe ser un identificador de modelo válido');
+  return raw;
+};
+
+// Solo se usa con `openai` (y ahí es obligatoria, también para Ollama local). http:// se admite por Ollama.
+// El mensaje nombra la variable, no el valor: una URL puede llevar credenciales.
+const parseAssistantBaseUrl = (raw, provider) => {
+  if (provider !== 'openai') return null;
+  if (raw === undefined || raw === '') throw new ConfigError('ASSISTANT_BASE_URL es obligatoria con ASSISTANT_PROVIDER=openai');
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new ConfigError('ASSISTANT_BASE_URL debe ser una URL http(s) válida');
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new ConfigError('ASSISTANT_BASE_URL debe ser una URL http(s) válida');
   return raw;
 };
 
@@ -73,13 +102,18 @@ export const loadConfig = (env) => {
     }
   }
 
+  const assistantProvider = parseAssistantProvider(env.ASSISTANT_PROVIDER);
+
   return {
     nodeEnv,
     port: parseNonNegativeInt('PORT', env.PORT, { min: 1, max: 65535, fallback: 3000 }),
     trustProxy: parseNonNegativeInt('TRUST_PROXY', env.TRUST_PROXY, { fallback: 0 }),
     jwtSecret,
     appUrl: parseAppUrl(env.APP_URL, nodeEnv),
-    anthropicApiKey: parseAnthropicApiKey(env.ANTHROPIC_API_KEY),
-    assistantModel: parseAssistantModel(env.ASSISTANT_MODEL),
+    anthropicApiKey: parseApiKey(env.ANTHROPIC_API_KEY),
+    assistantProvider,
+    assistantModel: parseAssistantModel(env.ASSISTANT_MODEL, assistantProvider),
+    assistantBaseUrl: parseAssistantBaseUrl(env.ASSISTANT_BASE_URL, assistantProvider),
+    assistantApiKey: parseApiKey(env.ASSISTANT_API_KEY),
   };
 };

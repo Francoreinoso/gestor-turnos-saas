@@ -19,6 +19,7 @@ Con pantalla:
 - **Equipo** (`/owner/equipo`): el dueño invita a un trabajador, copia el **enlace de activación** (`/activar?token=…`, vence en 72 horas, todavía no se envía por email), lo reenvía, edita y da de baja.
 - **Horario semanal** por profesional (`/owner/equipo/<id>/horario`, y `/staff/horario` para el propio trabajador, que además edita ahí su nombre y contraseña), del que se derivan los horarios libres.
 - **Activación de la cuenta** (`/activar`): el trabajador invitado define su contraseña desde el enlace y entra directo a su horario.
+- **Asistente de IA en la reserva pública** (opcional): el cliente verifica su teléfono con un código y conversa para ver servicios y horarios, reservar o cancelar sus turnos. El asistente solo **propone** la reserva; el turno nace cuando el cliente aprieta «Confirmar». Ver [Asistente de IA](#asistente-de-ia).
 
 Solo por API (todavía sin pantalla; ver [Operar por API lo que aún no tiene pantalla](#operar-por-api-lo-que-aún-no-tiene-pantalla)):
 
@@ -30,7 +31,8 @@ Solo por API (todavía sin pantalla; ver [Operar por API lo que aún no tiene pa
 |---|---|
 | Backend | Node 22 + Express 5, JavaScript con módulos ES |
 | Base de datos | PostgreSQL 17 con Drizzle ORM (migraciones `.sql` revisadas a mano) |
-| Autenticación | JWT para el panel; tokens de un solo turno, hasheados, para el cliente |
+| Autenticación | JWT para el panel; tokens de un solo turno, hasheados, para el cliente; código por teléfono y sesión de 1 hora para el asistente |
+| Asistente de IA | Puerto propio `llmClient` con dos adaptadores: `@anthropic-ai/sdk` o cualquier API compatible con OpenAI `chat/completions` (`fetch` nativo) |
 | Frontend | React 19 + Vite + React Router, en TypeScript |
 | Pruebas | `node:test` (backend), Vitest + Testing Library (frontend) |
 | Entorno | Docker Compose (db, setup, backend, frontend con nginx) y GitHub Actions |
@@ -41,7 +43,7 @@ El backend sigue clean architecture: las dependencias apuntan siempre hacia aden
 
 ```mermaid
 flowchart LR
-  infrastructure["infrastructure<br/>Express, Drizzle, cron, email"] --> application["application<br/>casos de uso"]
+  infrastructure["infrastructure<br/>Express, Drizzle, cron, email, LLM"] --> application["application<br/>casos de uso"]
   application --> domain["domain<br/>reglas puras, sin I/O"]
 ```
 
@@ -81,11 +83,16 @@ Las variables de `.env` (todas con valores de desarrollo que funcionan tal cual)
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base de datos; `docker-compose.yml` arma `DATABASE_URL` a partir de ellas |
 | `JWT_SECRET` | Firma de los JWT. **Cambiarla** fuera de desarrollo |
 | `APP_URL` | URL pública del frontend (por defecto `http://localhost:5173`): base de los enlaces de activación de trabajadores. En producción debe ser `https://` |
-| `ANTHROPIC_API_KEY` | Clave de la API de Anthropic para el asistente de IA (spec 011). Opcional: vacía, el asistente queda deshabilitado. Es un secreto: solo en tu `.env` local o en el gestor de secretos del despliegue, nunca en el repositorio |
-| `ASSISTANT_MODEL` | Modelo del asistente (por defecto `claude-sonnet-5-5`) |
+| `ASSISTANT_PROVIDER` | Proveedor del asistente de IA (spec 011): `anthropic` (por defecto) u `openai` (cualquier API compatible con `chat/completions`) |
+| `ANTHROPIC_API_KEY` | Clave de Anthropic, con `ASSISTANT_PROVIDER=anthropic`. Opcional: vacía, el asistente queda deshabilitado (503) y el resto de la app funciona |
+| `ASSISTANT_MODEL` | Modelo del asistente. Con `anthropic`, por defecto `claude-sonnet-5-5`; con `openai` es obligatorio |
+| `ASSISTANT_BASE_URL` | Con `openai`, obligatoria: URL base de la API compatible (por ejemplo `http://host.docker.internal:11434/v1` para Ollama en tu máquina) |
+| `ASSISTANT_API_KEY` | Con `openai`, clave del proveedor. Opcional: Ollama local no la pide |
 | `SEED_DEMO` | `true` siembra la cuenta demo si todavía no existe; `false` solo migra |
 | `TZ` | Zona horaria de los contenedores (por defecto `America/Santiago`) |
 | `DB_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | Puertos publicados, por si 5432, 3000 o 5173 están ocupados |
+
+Las claves (`ANTHROPIC_API_KEY`, `ASSISTANT_API_KEY`) son secretos: solo en tu `.env` local o en el gestor de secretos del despliegue, nunca en el repositorio. Ningún mensaje de error las imprime.
 
 El backend sin Docker lee además `NODE_ENV`, `PORT`, `DATABASE_URL` y `TRUST_PROXY` desde `backend/.env` (ver `backend/.env.example`). `TRUST_PROXY` es la cantidad de proxies de confianza delante del backend: con `0` (por defecto) ignora `X-Forwarded-For`; Docker Compose lo fija en `1` porque nginx va delante.
 
@@ -140,6 +147,7 @@ El enlace de gestión de un turno agendado (con su token) lo imprime el seed al 
 | Gestionar trabajadores | Sí | No | — | Pantalla |
 | Editar el horario semanal | De cualquier trabajador | Solo el propio | — | Pantalla |
 | Resumen financiero y pagos | Todos | Los propios | — | Pantalla |
+| Reservar o cancelar con el asistente de IA | — | — | Sí, tras verificar su teléfono; solo sus turnos | Pantalla |
 
 Un recurso fuera de alcance responde 404 y no 403, para no confirmar que existe (detalle en el [diseño §3.10](docs/diseno-gestor-turnos.md)).
 
@@ -156,6 +164,7 @@ REST con JSON. Las rutas del panel exigen `Authorization: Bearer <JWT>`; las pú
 | Pagos | `/payments`, `/payments/summary` |
 | Disponibilidad | `GET /availability/:business_id` |
 | Públicas | `GET /public/accounts/:id`, `POST /public/bookings`, `/public/appointments/:id` (ver, cancelar, reprogramar con `?token=`) |
+| Asistente de IA | `POST /assistant/session`, `POST /assistant/session/verify`, `POST /assistant/messages`, `POST /assistant/proposals/:id/confirm` (las dos últimas con el token de sesión del asistente) |
 | Salud | `GET /health` |
 
 La especificación completa está en el [documento de diseño §4](docs/diseno-gestor-turnos.md).
@@ -181,6 +190,32 @@ La invitación de un trabajador también se puede hacer por API: `POST /staff` y
 
 Las contraseñas deben tener entre 8 caracteres y 72 bytes. Cada ruta, con sus cuerpos y códigos de error, está en el [documento de diseño §4](docs/diseno-gestor-turnos.md).
 
+## Asistente de IA
+
+Opcional (spec 011). En la página de reserva aparece «Reservar con el asistente»: el cliente ingresa su teléfono, recibe un código de 6 dígitos y conversa. Puede preguntar por servicios, precios y horarios, pedir una reserva o cancelar uno de sus turnos.
+
+Principio rector: **el modelo nunca toca la base de datos**. Solo pide herramientas (`listar_servicios`, `ver_disponibilidad`, `ver_mis_turnos`, `proponer_reserva`, `cancelar_turno`); el backend valida cada pedido con Zod, fija la cuenta y el cliente desde la sesión (ninguna herramienta los acepta del modelo) y decide si lo ejecuta. `proponer_reserva` solo acepta un `slot_id` que `ver_disponibilidad` haya emitido en esa conversación, y no crea el turno: crea una propuesta que vence a los 10 minutos y que el cliente confirma con un botón, sin pasar por el modelo. Antes de cancelar, el asistente pide confirmación en el chat.
+
+**Elegir proveedor.** El bucle del agente habla con un puerto propio; hay dos adaptadores:
+
+| Proveedor | Variables |
+|---|---|
+| Anthropic (por defecto) | `ANTHROPIC_API_KEY=<tu clave>`; modelo por defecto `claude-sonnet-5-5` |
+| Ollama local, sin costo | `ASSISTANT_PROVIDER=openai`, `ASSISTANT_BASE_URL=http://host.docker.internal:11434/v1` (sin Docker: `http://localhost:11434/v1`), `ASSISTANT_MODEL=<modelo descargado, por ejemplo llama3.2>` |
+| Capas gratuitas compatibles con OpenAI (Groq, Gemini, OpenRouter) | `ASSISTANT_PROVIDER=openai`, `ASSISTANT_BASE_URL=<URL compatible del proveedor>`, `ASSISTANT_API_KEY=<tu clave>`, `ASSISTANT_MODEL=<modelo>` |
+
+Un modelo gratuito o pequeño falla más con las herramientas; los permisos los sigue imponiendo el backend. Los cupos de las capas gratuitas cambian: si el proveedor responde con límite de uso (429), un error de red, un timeout o un 5xx, la API responde 503 `assistant_busy` y el chat dice «intenta de nuevo en unos minutos».
+
+**El código de verificación** todavía no se envía por SMS: el backend lo imprime en su log (`docker compose logs backend | grep "\[sms\]"`), igual que el enlace de activación de los trabajadores.
+
+**Evals.** `backend/evals/` tiene un conjunto de casos contra el modelo real configurado (no reservar sin proponer, no cancelar turnos ajenos, no inventar horarios, pedir aclaración si falta el servicio, resistir inyección de instrucciones y rechazar temas ajenos), fuera de `npm test`. Cada corrida consume cuota del proveedor, y dinero si es de pago:
+
+```bash
+cd backend
+npm run evals                  # todos los casos, una vez; --repeat 3 para repetir, --only <id,...> para elegir
+npm run evals:compare          # compara la última corrida de cada proveedor y modelo
+```
+
 ## Decisiones técnicas
 
 - **Sin solapamientos, garantizado por la base.** Un trigger y una restricción `EXCLUDE` impiden dos turnos simultáneos del mismo profesional aunque lleguen en paralelo; la aplicación solo traduce el error a 409. ([§3.3](docs/diseno-gestor-turnos.md))
@@ -189,6 +224,7 @@ Las contraseñas deben tener entre 8 caracteres y 72 bytes. Cada ruta, con sus c
 - **Baja lógica.** Los servicios se desactivan y los turnos se cancelan; no se borran, para conservar el historial y los pagos. ([§3.5](docs/diseno-gestor-turnos.md))
 - **Transacciones.** Cambiar un precio con su historial, reprogramar o completar un turno con su pago ocurre todo o nada. ([§3.4](docs/diseno-gestor-turnos.md), [§3.6](docs/diseno-gestor-turnos.md))
 - **Validación con Zod, en un solo lugar.** Cada endpoint declara su entrada con un esquema puro de `domain/schemas/`; el primer fallo se traduce al mismo `{ error: <código> }` de siempre y las reglas de negocio quedan fuera. ([§4](docs/diseno-gestor-turnos.md), [spec 007](docs/specs/007-validacion-zod/spec.md))
+- **Asistente que propone y no decide.** El modelo pide herramientas; el backend valida, fija la identidad desde la sesión y ejecuta. La reserva solo se crea con el botón de confirmación (idempotente: confirmar dos veces devuelve el mismo turno), y una propuesta pendiente por horario la garantiza un índice único parcial en la base. El historial de la conversación viaja en el cliente comprimido y firmado por el servidor, sin tabla; de ahí salen los horarios emitidos. ([spec 011](docs/specs/011-asistente-ia/spec.md))
 - **Clean architecture.** `domain` sin I/O, `application` orquesta y `infrastructure` es reemplazable; el seed usa los mismos casos de uso que la API, así los datos demo respetan las mismas reglas. ([§5](docs/diseno-gestor-turnos.md))
 
 ## Seguridad
@@ -202,6 +238,7 @@ Qué protege el sistema hoy ([spec 008](docs/specs/008-endurecimiento-api/spec.m
 - **JWT con algoritmo fijo** (HS256): un token `alg: none` o de otro algoritmo se rechaza.
 - **Configuración que falla rápido.** Sin `JWT_SECRET` el servidor no arranca; en producción además exige 32 caracteres como mínimo y rechaza los secretos de ejemplo del repositorio.
 - **Cabeceras.** La API envía `nosniff`, `Referrer-Policy: no-referrer` y `Cache-Control: no-store`, y no `X-Powered-By`. El frontend, `nosniff`, `X-Frame-Options: DENY` y `no-referrer`, para que el token de un enlace de gestión no salga como `Referer`.
+- **Asistente de IA.** El código de verificación es de un solo uso, vence a los 10 minutos, se guarda hasheado y se invalida al quinto intento fallido; la respuesta es la misma exista o no el cliente. Hay límites por teléfono (3 códigos cada 15 minutos) y por IP, y de mensajes por IP, por cliente y por conversación. El token de sesión (1 hora) se firma con una clave derivada distinta de la del panel: no sirven el uno por el otro. La clave del proveedor vive solo en el servidor y el detalle de sus errores nunca llega al cliente.
 - **Backend solo en `127.0.0.1`** con Docker Compose: desde fuera de la máquina la API se alcanza únicamente a través del frontend, que es quien fija la IP real del cliente.
 
 ## Tests
@@ -212,7 +249,7 @@ npm run db:migrate
 npm test
 ```
 
-Los tests de integración usan una base PostgreSQL real (`DATABASE_URL`). La suite debe pasar en cualquier zona horaria; la CI la corre con `TZ=UTC` y con `TZ=America/Santiago`.
+Los tests de integración usan una base PostgreSQL real (`DATABASE_URL`). La suite debe pasar en cualquier zona horaria; la CI la corre con `TZ=UTC` y con `TZ=America/Santiago`. Los tests del asistente usan un LLM falso: `npm test` nunca llama a un proveedor real (los evals contra el modelo real se corren aparte con `npm run evals` desde `backend`).
 
 ```bash
 cd frontend
@@ -243,8 +280,9 @@ Cada feature sigue la misma cadena: [constitución](docs/constitution.md) → sp
 - Los **límites de uso viven en la memoria de cada proceso**: no se comparten entre varias réplicas del backend.
 - Con Docker, la IP que ve nginx es la del cliente solo si Docker no la enmascara (por ejemplo, con Docker Desktop o redes rootless todos pueden aparecer con la IP de la puerta de enlace y compartir un mismo cupo).
 - **Sin recuperación de contraseña** ni verificación de email.
+- **Asistente de IA:** el código de verificación solo aparece en el log del backend (no hay proveedor de SMS); el cliente creado por el asistente queda con su teléfono como nombre; una conversación admite hasta 30 mensajes del cliente y vive solo en la memoria de la pestaña. No reprograma turnos (se cancela y se reserva otro).
 
-Pendientes de producto: notificaciones por email o WhatsApp, zonas horarias por negocio, pantalla para las comisiones, y recuperación de contraseña.
+Pendientes de producto: notificaciones por email o WhatsApp, envío real del código del asistente, zonas horarias por negocio, pantalla para las comisiones, y recuperación de contraseña.
 
 ## Estructura del repositorio
 

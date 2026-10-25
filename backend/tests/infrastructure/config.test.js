@@ -20,7 +20,7 @@ test('configuración mínima válida y valores por defecto', () => {
   const cfg = loadConfig({ JWT_SECRET: 'algo' });
   assert.deepEqual(cfg, {
     nodeEnv: 'development', port: 3000, trustProxy: 0, jwtSecret: 'algo', appUrl: 'http://localhost:5173',
-    anthropicApiKey: null, assistantModel: 'claude-sonnet-5-5',
+    anthropicApiKey: null, assistantProvider: 'anthropic', assistantModel: 'claude-sonnet-5-5', assistantBaseUrl: null, assistantApiKey: null,
   });
 });
 
@@ -108,7 +108,8 @@ test('ASSISTANT_MODEL: default claude-sonnet-5-5, valor propio, vacío = default
   assert.equal(loadConfig(dev()).assistantModel, 'claude-sonnet-5-5');
   assert.equal(loadConfig(dev({ ASSISTANT_MODEL: '' })).assistantModel, 'claude-sonnet-5-5');
   assert.equal(loadConfig(dev({ ASSISTANT_MODEL: 'claude-haiku-5-5' })).assistantModel, 'claude-haiku-5-5');
-  for (const bad of ['con espacios', 'a/b', 'x'.repeat(101)]) rejects(dev({ ASSISTANT_MODEL: bad }), 'ASSISTANT_MODEL');
+  assert.equal(loadConfig(dev({ ASSISTANT_MODEL: 'openai/gpt-oss-120b' })).assistantModel, 'openai/gpt-oss-120b', 'con barra (Groq, OpenRouter)');
+  for (const bad of ['con espacios', 'a"b', 'x'.repeat(101)]) rejects(dev({ ASSISTANT_MODEL: bad }), 'ASSISTANT_MODEL');
 });
 
 test('ninguna falla de configuración imprime la clave de Anthropic — regla: las claves no se publican', () => {
@@ -127,5 +128,52 @@ test('los .env.example no traen claves reales de Anthropic: ANTHROPIC_API_KEY qu
     assert.ok(!/sk-ant-/i.test(text), `${file}: no debe contener una clave`);
     const line = /^ANTHROPIC_API_KEY=(.*)$/m.exec(text);
     if (line) assert.equal(line[1].trim(), '', `${file}: ANTHROPIC_API_KEY debe ir vacía`);
+  }
+});
+
+// spec 011 T6e — proveedor intercambiable: ASSISTANT_PROVIDER, ASSISTANT_BASE_URL, ASSISTANT_API_KEY.
+const openai = (extra = {}) => dev({ ASSISTANT_PROVIDER: 'openai', ASSISTANT_BASE_URL: 'http://localhost:11434/v1', ASSISTANT_MODEL: 'llama3.2', ...extra });
+
+test('ASSISTANT_PROVIDER: anthropic por defecto, openai admitido, otro valor → no arranca', () => {
+  assert.equal(loadConfig(dev()).assistantProvider, 'anthropic');
+  assert.equal(loadConfig(dev({ ASSISTANT_PROVIDER: '' })).assistantProvider, 'anthropic');
+  assert.equal(loadConfig(openai()).assistantProvider, 'openai');
+  for (const bad of ['OpenAI', 'gemini', 'ollama']) rejects(dev({ ASSISTANT_PROVIDER: bad }), 'ASSISTANT_PROVIDER');
+});
+
+test('con openai, ASSISTANT_MODEL es obligatorio (sin valor por defecto)', () => {
+  rejects(openai({ ASSISTANT_MODEL: undefined }), 'ASSISTANT_MODEL');
+  rejects(openai({ ASSISTANT_MODEL: '' }), 'ASSISTANT_MODEL');
+  assert.equal(loadConfig(openai({ ASSISTANT_MODEL: 'gemini-2.5-flash' })).assistantModel, 'gemini-2.5-flash');
+});
+
+test('con openai, ASSISTANT_BASE_URL es obligatoria y http(s); con anthropic se ignora', () => {
+  rejects(openai({ ASSISTANT_BASE_URL: undefined }), 'ASSISTANT_BASE_URL');
+  for (const bad of ['localhost:11434', 'ftp://x.test', 'no es url']) {
+    rejects(openai({ ASSISTANT_BASE_URL: bad }), 'ASSISTANT_BASE_URL');
+    try { loadConfig(openai({ ASSISTANT_BASE_URL: bad })); } catch (err) { assert.ok(!err.message.includes(bad), err.message); }
+  }
+  assert.equal(loadConfig(openai()).assistantBaseUrl, 'http://localhost:11434/v1', 'http admitido (Ollama local)');
+  assert.equal(loadConfig(prod({ ASSISTANT_PROVIDER: 'openai', ASSISTANT_BASE_URL: 'https://api.groq.com/openai/v1', ASSISTANT_MODEL: 'm' })).assistantBaseUrl, 'https://api.groq.com/openai/v1');
+  assert.equal(loadConfig(dev({ ASSISTANT_BASE_URL: 'no es url' })).assistantBaseUrl, null);
+});
+
+test('ASSISTANT_API_KEY: opcional (Ollama no la pide), se recorta y nunca aparece en un error — RNF-2', () => {
+  assert.equal(loadConfig(openai()).assistantApiKey, null);
+  assert.equal(loadConfig(openai({ ASSISTANT_API_KEY: ' gsk-x ' })).assistantApiKey, 'gsk-x');
+  const key = 'gsk-CLAVE-QUE-NO-DEBE-APARECER';
+  for (const env of [openai({ ASSISTANT_API_KEY: key, ASSISTANT_MODEL: '' }), openai({ ASSISTANT_API_KEY: key, ASSISTANT_BASE_URL: 'x' }), openai({ ASSISTANT_API_KEY: key, PORT: '0' })]) {
+    try { loadConfig(env); assert.fail('debía lanzar'); } catch (err) { assert.ok(!String(err.stack).includes(key), err.message); }
+  }
+});
+
+test('los .env.example no traen claves: ASSISTANT_API_KEY queda vacía', () => {
+  for (const file of ['../../../.env.example', '../../.env.example']) {
+    const text = readFileSync(new URL(file, import.meta.url), 'utf8');
+    const line = /^ASSISTANT_API_KEY=(.*)$/m.exec(text);
+    assert.ok(line, `${file}: documenta ASSISTANT_API_KEY`);
+    assert.equal(line[1].trim(), '', `${file}: ASSISTANT_API_KEY debe ir vacía`);
+    assert.match(text, /^ASSISTANT_PROVIDER=/m, `${file}: documenta ASSISTANT_PROVIDER`);
+    assert.match(text, /^ASSISTANT_BASE_URL=/m, `${file}: documenta ASSISTANT_BASE_URL`);
   }
 });
