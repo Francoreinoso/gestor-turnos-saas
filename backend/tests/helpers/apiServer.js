@@ -8,8 +8,9 @@ export const tokenFor = (user) =>
 
 // spec 007: servidor Express efímero con todas las rutas (app.js arranca cron y puerto al importarse).
 // `body` se manda tal cual como JSON (incluidos null, arrays y strings); `undefined` = sin cuerpo.
-export async function startApiServer({ trustProxy = 1 } = {}) {
-  const app = createApp({ trustProxy });
+// spec 011: `assistant` ({ llm, sms }) inyecta un LLM falso y un espía del envío de códigos.
+export async function startApiServer({ trustProxy = 1, assistant } = {}) {
+  const app = createApp({ trustProxy, assistant });
   const server = await new Promise(resolve => { const s = app.listen(0, () => resolve(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;
 

@@ -20,6 +20,9 @@ export const toResponse = (err) => {
   if (Number.isInteger(status) && status >= 400 && status <= 499) {
     return { status, body: { error: CODE_RE.test(err.message ?? '') ? err.message : 'bad_request' } };
   }
+  // spec 011 RF-18: el único 5xx de aplicación es el 503 del asistente (proveedor ocupado o no configurado), y solo
+  // con un código; cualquier otro 5xx sigue siendo internal_error.
+  if (status === 503 && CODE_RE.test(err.message ?? '')) return { status, body: { error: err.message } };
   return { status: 500, body: { error: 'internal_error' } };
 };
 

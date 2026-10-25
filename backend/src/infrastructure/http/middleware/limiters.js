@@ -24,3 +24,21 @@ export const registerLimiter = createLimiter({ windowMs: 60 * MINUTE_MS, limit: 
 // spec 005 RF-8, D9: /public/* — estricto para escrituras y activación (frena fuerza bruta sobre tokens), holgado para lecturas.
 export const strictLimiter = createLimiter({ windowMs: 15 * MINUTE_MS, limit: 20 });
 export const readLimiter = createLimiter({ windowMs: 15 * MINUTE_MS, limit: 120 });
+
+// spec 011 RF-4 — /assistant/*: por IP para pedir y verificar códigos (por teléfono lo limita startSession en la
+// base), y por IP y por cliente para los mensajes, que son los que cuestan llamadas al modelo.
+export const assistantCodeLimiter = createLimiter({ windowMs: 15 * MINUTE_MS, limit: 10 });
+export const assistantVerifyLimiter = createLimiter({ windowMs: 15 * MINUTE_MS, limit: 20 });
+export const assistantMessageIpLimiter = createLimiter({ windowMs: 15 * MINUTE_MS, limit: 60 });
+
+// Cuenta por cliente de la sesión (va después de assistantAuth), aunque cambie de IP.
+export const createClientLimiter = ({ windowMs, limit }) =>
+  rateLimit({
+    windowMs,
+    limit,
+    keyGenerator: (req) => `${req.assistant.accountId}:${req.assistant.clientId}`,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { error: 'too_many_requests' },
+  });
+export const assistantMessageClientLimiter = createClientLimiter({ windowMs: 15 * MINUTE_MS, limit: 30 });

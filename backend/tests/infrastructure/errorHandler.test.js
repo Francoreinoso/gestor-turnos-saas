@@ -33,6 +33,11 @@ test('error sin estado o con 5xx → exactamente internal_error, sin importar el
   }
 });
 
+test('spec 011 RF-18: 503 con código pasa (asistente ocupado); 503 sin código → internal_error', () => {
+  assert.deepEqual(toResponse(appError(503, 'assistant_busy')), { status: 503, body: { error: 'assistant_busy' } });
+  assert.deepEqual(toResponse(appError(503, 'Rate limit exceeded for key sk-x')), { status: 500, body: { error: 'internal_error' } });
+});
+
 test('un estado fuera de 4xx/5xx nunca se usa como código HTTP', () => {
   assert.equal(toResponse(appError(200, 'ok')).status, 500);
   assert.equal(toResponse(appError(302, 'moved')).status, 500);
