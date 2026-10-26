@@ -4,13 +4,20 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { setupDb, teardownDb, withAccount, db } from '../helpers/db.js';
+import { startApiServer, tokenFor } from '../helpers/apiServer.js';
 import * as repos from '../../src/infrastructure/db/repositories/index.js';
 import { startSession } from '../../src/application/assistant/startSession.js';
 import { verifySession } from '../../src/application/assistant/verifySession.js';
-import { clients } from '../../db/schema.js';
+import { clients, users } from '../../db/schema.js';
 
-before(setupDb);
-after(teardownDb);
+let api;
+before(async () => { await setupDb(); api = await startApiServer(); });
+after(async () => { await api.close(); await teardownDb(); });
+
+const seedOwner = (accountId) =>
+  db.insert(users).values({
+    account_id: accountId, name: 'Dueña', email: `u-${crypto.randomUUID()}@test.com`, role: 'owner', status: 'activo', password_hash: 'x',
+  }).returning().then(r => r[0]);
 
 const phone = () => `+569${crypto.randomInt(10_000_000, 99_999_999)}`;
 const email = () => `c-${crypto.randomUUID()}@example.com`;
@@ -64,3 +71,29 @@ test('findOrCreate: altas simultáneas del mismo cliente terminan en una sola fi
     assert.equal(new Set(results.map((c) => c.id)).size, 1);
     assert.equal((await db.select().from(clients).where(eq(clients.account_id, a.id))).length, 1);
   }));
+
+test('el panel no duplica clientes de la cuenta: POST y PATCH responden 409, no 500 — RF-19', () =>
+  withAccount((a) => withAccount(async (b) => {
+    const tk = tokenFor(await seedOwner(a.id));
+    const p = phone();
+    const e = email();
+    const created = await api.call('POST', '/clients', { name: 'Ana', email: e, phone: p }, tk);
+    assert.equal(created.status, 201);
+
+    const samePhone = await api.call('POST', '/clients', { name: 'Otra', phone: p }, tk);
+    assert.equal(samePhone.status, 409);
+    assert.equal(samePhone.body.error, 'phone_taken');
+
+    const sameEmail = await api.call('POST', '/clients', { name: 'Otra', email: e.toUpperCase() }, tk);
+    assert.equal(sameEmail.status, 409);
+    assert.equal(sameEmail.body.error, 'email_taken');
+
+    const other = await api.call('POST', '/clients', { name: 'Beto', phone: phone() }, tk);
+    const edit = await api.call('PATCH', `/clients/${other.body.id}`, { phone: p }, tk);
+    assert.equal(edit.status, 409);
+    assert.equal(edit.body.error, 'phone_taken');
+
+    // Otra cuenta sí puede tener a la misma persona.
+    const elsewhere = await api.call('POST', '/clients', { name: 'Ana', email: e, phone: p }, tokenFor(await seedOwner(b.id)));
+    assert.equal(elsewhere.status, 201);
+  })));

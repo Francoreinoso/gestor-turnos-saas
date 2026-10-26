@@ -11,6 +11,15 @@ uuidParams(router);
 const wrap = fn => (req, res, next) => fn(req, res, next).catch(next);
 const httpErr = (status, msg) => Object.assign(new Error(msg), { status });
 
+// spec 011 RF-19: email y teléfono son únicos dentro de la cuenta (migración 0008). El índice es el que decide,
+// también ante dos altas simultáneas; aquí solo se traduce el choque a 409 en vez de 500.
+const TAKEN = { clients_account_email_unique: 'email_taken', clients_account_phone_unique: 'phone_taken' };
+const mapTaken = (err) => {
+  const pg = err.cause ?? err;
+  if (pg.code === '23505' && TAKEN[pg.constraint]) throw httpErr(409, TAKEN[pg.constraint]);
+  throw err;
+};
+
 router.post('/', auth, wrap(async (req, res) => {
   const { name, email, phone, notes } = parseInput(createClientBody, req.body);
 
@@ -20,7 +29,7 @@ router.post('/', auth, wrap(async (req, res) => {
     email: email || null,
     phone: phone || null,
     notes,
-  });
+  }).catch(mapTaken);
 
   res.status(201).json(client);
 }));
@@ -46,7 +55,7 @@ router.patch('/:id', auth, wrap(async (req, res) => {
     email: email || client.email,
     phone: phone ?? client.phone,
     notes: notes ?? client.notes,
-  }));
+  }).catch(mapTaken));
 }));
 
 export default router;

@@ -36,7 +36,7 @@ WhatsApp u otros canales; reprogramar; ventana mínima de cancelación; pagos; v
 - RF-2: CUANDO el cliente envía el código correcto (`POST /assistant/session/verify`), EL SISTEMA devuelve un token de sesión corto (1 h) con `account_id` y `client_id` (el cliente se busca o crea por teléfono dentro de la cuenta).
 - RF-3: SI el código es incorrecto, vencido o ya usado, ENTONCES responde 401 `invalid_code`; tras 5 intentos fallidos el código se invalida.
 - RF-4: EL SISTEMA limita mensajes y solicitudes de código por teléfono y por IP.
-- RF-19: UNA misma persona puede ser cliente de varios negocios: el teléfono y el email de `clients` son únicos **dentro de cada cuenta**, no en toda la base (la migración 0001 los hizo globales, y verificar el código de un teléfono que ya era cliente de otra cuenta respondía 500). AL buscar o crear un cliente, EL SISTEMA lo busca en la cuenta por email y, si no aparece, por teléfono; dos altas simultáneas del mismo cliente terminan en una sola fila, sin error. Corrige también la reserva pública (spec 005).
+- RF-19: UNA misma persona puede ser cliente de varios negocios: el teléfono y el email de `clients` son únicos **dentro de cada cuenta**, no en toda la base (la migración 0001 los hizo globales, y verificar el código de un teléfono que ya era cliente de otra cuenta respondía 500). AL buscar o crear un cliente, EL SISTEMA lo busca en la cuenta por email y, si no aparece, por teléfono; dos altas simultáneas del mismo cliente terminan en una sola fila, sin error. Corrige también la reserva pública (spec 005). SI el panel crea o edita un cliente con un email o teléfono que ya tiene otra ficha de la cuenta, ENTONCES responde 409 `email_taken` o `phone_taken`, no 500.
 
 ### Herramientas
 
