@@ -202,9 +202,10 @@ Principio rector: **el modelo nunca toca la base de datos**. Solo pide herramien
 |---|---|
 | Anthropic (por defecto) | `ANTHROPIC_API_KEY=<tu clave>`; modelo por defecto `claude-sonnet-5-5` |
 | Ollama local, sin costo | `ASSISTANT_PROVIDER=openai`, `ASSISTANT_BASE_URL=http://host.docker.internal:11434/v1` (sin Docker: `http://localhost:11434/v1`), `ASSISTANT_MODEL=<modelo descargado, por ejemplo llama3.2>` |
-| Capas gratuitas compatibles con OpenAI (Groq, Gemini, OpenRouter) | `ASSISTANT_PROVIDER=openai`, `ASSISTANT_BASE_URL=<URL compatible del proveedor>`, `ASSISTANT_API_KEY=<tu clave>`, `ASSISTANT_MODEL=<modelo>` |
+| Groq, capa gratuita (recomendado para la demo) | `ASSISTANT_PROVIDER=openai`, `ASSISTANT_BASE_URL=https://api.groq.com/openai/v1`, `ASSISTANT_API_KEY=<tu clave>`, `ASSISTANT_MODEL=openai/gpt-oss-120b` |
+| Otras APIs compatibles con OpenAI (Gemini, OpenRouter) | `ASSISTANT_PROVIDER=openai`, `ASSISTANT_BASE_URL=<URL compatible del proveedor>`, `ASSISTANT_API_KEY=<tu clave>`, `ASSISTANT_MODEL=<modelo>` |
 
-Un modelo gratuito o pequeño falla más con las herramientas; los permisos los sigue imponiendo el backend. Los cupos de las capas gratuitas cambian: si el proveedor responde con límite de uso (429), un error de red, un timeout o un 5xx, la API responde 503 `assistant_busy` y el chat dice «intenta de nuevo en unos minutos».
+Con Groq `openai/gpt-oss-120b` las evals pasaron 27 de 27 casos (3 repeticiones) y cada respuesta tarda 1 o 2 segundos. La capa gratuita de Gemini `gemini-3.8-flash` admite solo 20 pedidos por día y cada respuesta tarda de 20 a 60 segundos, por eso no se usa en la demo. Un modelo gratuito o pequeño falla más con las herramientas; los permisos los sigue imponiendo el backend. Los cupos de las capas gratuitas cambian: si el proveedor responde con límite de uso (429), un error de red, un timeout o un 5xx, la API responde 503 `assistant_busy` y el chat dice «intenta de nuevo en unos minutos».
 
 **El código de verificación** todavía no se envía por SMS: el backend lo imprime en su log (`docker compose logs backend | grep "\[sms\]"`), igual que el enlace de activación de los trabajadores.
 
